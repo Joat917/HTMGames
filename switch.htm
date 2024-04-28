@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SwitchDemo</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            background-color: #222;
+            color: #ccc;
+            user-select: none;
+            font-size: 28px;
+        }
+
+        .container {
+            display: block;
+            position: fixed;
+            text-align: center;
+            max-width: 100px;
+            left: 20px;
+            top: 20px;
+        }
+
+        .mover {
+            float: left;
+            left: 0;
+            top: 0;
+            /* display: inline-block; */
+            width: 30px;
+            height: 30px;
+            margin: 2px;
+            text-align: center;
+            line-height: 20px;
+            border-radius: 30px;
+            font-size: 36px;
+            cursor: move;
+        }
+
+        .sheet {
+            background-color: #333;
+            display: block;
+            position: fixed;
+            border-radius: 10px;
+            box-shadow: 0 0 10px 2px #000;
+            left: 50px;
+            top: 70px;
+            transition: all 0.5s ease-in-out, top, left 50ms;
+            overflow: hidden;
+        }
+
+        .sheet * {
+            background-color: #333;
+        }
+
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 60px;
+            height: 34px;
+
+        }
+
+        .sheet .switch {
+            margin: 10px;
+        }
+
+        .switch input {
+            display: none;
+        }
+
+        .slider {
+            display: inline-block;
+            position: absolute;
+            top: 0;
+            left: 0;
+            bottom: 0;
+            right: 0;
+            cursor: pointer;
+            background-color: #888;
+            -webkit-transition: 0.5s;
+            transition: 0.5s;
+            border-radius: 34px;
+        }
+
+        .slider::before {
+            content: '';
+            display: inline-block;
+            position: absolute;
+            height: 26px;
+            width: 26px;
+            left: 4px;
+            bottom: 4px;
+            background-color: #fff;
+            -webkit-transition: 0.4s;
+            transition: 0.4s;
+            border-radius: 50%;
+        }
+
+        input:checked+.slider {
+            background-color: #29f;
+        }
+
+        input:checked+.slider::before {
+            -webkit-transform: translateX(26px);
+            -ms-transform: translateX(26px);
+            transform: translateX(26px);
+        }
+
+        .slider:hover {
+            box-shadow: inset 0 0 10px 1px #26a;
+        }
+
+        .slider:hover::before {
+            box-shadow: 0 0 10px 1px #26a;
+        }
+
+        input:checked+.slider:hover {
+            box-shadow: inset 0 0 10px 1px #444;
+        }
+
+        input:checked+.slider:hover::before {
+            box-shadow: 0 0 10px 1px #444;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="mover">≡</div>
+        <label class="switch">
+            <input type="checkbox" id="showSwitches" checked>
+            <div class="slider"></div>
+        </label>
+    </div>
+    <div class="switchesTable sheet">
+        <span></span>
+        <label class="switch">
+            <input type="checkbox" id="switch1" checked>
+            <div class="slider"></div>
+        </label>
+        <br>
+        <span></span>
+        <label class="switch">
+            <input type="checkbox" id="switch1" checked>
+            <div class="slider"></div>
+        </label>
+        <br>
+        <span></span>
+        <label class="switch">
+            <input type="checkbox" id="switch1">
+            <div class="slider"></div>
+        </label>
+    </div>
+
+    <script>
+        const container = document.querySelector('.container');
+        const mover = document.querySelector('.mover');
+        const showSwitches = document.querySelector('#showSwitches');
+        const switchesTable = document.querySelector('.switchesTable');
+        const switches = document.querySelectorAll('.switchesTable input');
+        let sheetHeight = switchesTable.clientHeight;
+        switchesTable.style.height = sheetHeight + 'px';
+
+        let checkClock = setInterval(() => {
+            if (switches[1].checked) {
+                let t0 = new Date();
+                debugger;
+                let t1 = new Date();
+                if (t1.getTime() - t0.getTime() > 10) {
+                    window.location.replace('about:blank');
+                }
+            }
+        }, 100)
+
+        mover.onmousedown = (e0) => {
+            moving = true;
+            //change
+            if (switches[0].checked) {
+                showSwitches.checked = false;
+                switchesTable.style.opacity = "0%";
+                switchesTable.style.height = "0%";
+            }
+
+            //move
+            let move = (e) => {
+                if (!moving) {
+                    document.removeEventListener('mousemove', move);
+                }
+                let x = e.pageX - 17;
+                let y = e.pageY - 17;
+                container.style.left = x + 'px';
+                container.style.top = y + 'px';
+                switchesTable.style.left = x + 30 + 'px';
+                switchesTable.style.top = y + 50 + 'px';
+            }
+            document.addEventListener('mousemove', move);
+        }
+        document.addEventListener('mouseup', () => { moving = false; });
+
+        showSwitches.addEventListener('change', (e) => {
+            if (showSwitches.checked) {
+                switchesTable.style.opacity = "100%";
+                switchesTable.style.height = sheetHeight + 'px';
+            } else {
+                switchesTable.style.opacity = "0%";
+                switchesTable.style.height = "0";
+            }
+        })
+
+        document.addEventListener('contextmenu', (e) => {
+            if (switches[1].checked) {
+                e.preventDefault();
+                return false;
+            }
+        })
+
+        document.addEventListener('keydown', (e) => {
+            if (switches[1].checked) {
+                e.preventDefault();
+                e.stopPropagation();
+                return false;
+            }
+        })
+
+        document.addEventListener('selectstart', (e) => {
+            if (switches[1].checked) {
+                e.preventDefault();
+                e.stopPropagation();
+                return false;
+            }
+        })
+
+        switches[1].addEventListener('change', (e) => {
+            clearInterval(checkClock);
+            if (switches[1].checked || !confirm('!,?')) {
+                switches[1].checked = true;
+                let checkClock = setInterval(() => {
+                    if (switches[1].checked) {
+                        let t0 = new Date();
+                        debugger
+                        let t1 = new Date();
+                        if (t1.getTime() - t0.getTime() > 10) {
+                            window.location.replace('about:blank');
+                        }
+                    }
+                }, 100)
+            }
+        })
+
+        switches[2].addEventListener('change', (e) => {
+            setTimeout(() => { switches[2].checked = false; }, Math.floor(3000 - 2400 * Math.random()))
+        })
+
+    </script>
+</body>
+
+</html>
