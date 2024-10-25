@@ -1,11 +1,207 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-CN">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Document</title>
+    <style>
+        * {
+            padding: 0;
+            margin: 0;
+            background-color: #ddd;
+            color: #333;
+            cursor: default;
+            font-size: 20px;
+        }
+
+        @media (prefers-color-scheme:dark) {
+            * {
+                background-color: #333;
+                color: #ddd;
+            }
+        }
+
+        body {
+            text-align: center;
+        }
+
+        .title {
+            font-size: 60px;
+            text-align: center;
+            padding: 20px 0;
+        }
+
+        .text {
+            display: inline-block;
+            text-align: center;
+            line-height: 50px;
+            max-width: 800px;
+        }
+
+        .container {
+            display: inline-block;
+            text-align: center;
+        }
+
+        .button {
+            display: inline-block;
+            padding: 5px 15px;
+            margin: 0px 15px;
+            border: #888 solid 1px;
+            border-radius: 10px;
+            transition-duration: 0.5s;
+            -webkit-user-select: none;
+            user-select: none;
+            cursor: pointer;
+        }
+
+        .button:hover {
+            background-color: #eaa;
+        }
+
+        .button:active {
+            color: #944;
+            border-color: #944;
+        }
+
+        @media (prefers-color-scheme:dark) {
+            .button:hover {
+                background-color: #449;
+            }
+
+            .button:active {
+                color: #aae;
+                border-color: #aae;
+            }
+        }
+
+        input {
+            border: #888 solid 1px;
+            border-radius: 10px;
+            padding: 15px 10px;
+            width: 200px;
+        }
+    </style>
 </head>
+
 <body>
-    
+    <div class="js_not_enabled">本功能需要使用Javascript</div>
+    <div class="title">整数分析</div>
+    <!-- 输入一个整数 -->
+    <div class="container">
+        <input type="number" id="number_input">
+    </div>
+    <br>
+
+    <!-- 把它分解素因数 -->
+    <div class="container">
+        <div class="text" id="prime_factors"></div>
+    </div>
+    <br>
+
+    <!-- 获得它的所有因子和因子总数 -->
+    <div class="container">
+        <div class="text" id="factors"></div>
+    </div>
+    <br>
+
+    <!-- 从1到这个整数之间生成一个随机数 -->
+    <div class="container">
+        <div class="text" id="random_int"></div>
+        <div class="button" id="random_int_but">生成</div>
+    </div>
+    <script>
+        const inp = document.querySelector("#number_input");
+        const out_prime_factors = document.querySelector("#prime_factors");
+        const out_factors = document.querySelector("#factors");
+        const out_rand = document.querySelector("#random_int");
+        const but_rand = document.querySelector("#random_int_but");
+        for (let x of document.querySelectorAll('.js_not_enabled')) x.remove();
+
+        function get_factors(n) {
+            let upper_limit = Math.floor(Math.sqrt(n));
+            let output = [];
+            let start_time = (new Date()).getTime();
+            for (let x = 1; x <= upper_limit; x++) {
+                if (n % x == 0) {
+                    output.push(x);
+                }
+                if (x % 100 == 0 && (new Date()).getTime() - start_time > 3000) {
+                    return undefined;
+                }
+            }
+            let o2 = output.map(v => n / v);
+            if (o2[o2.length - 1] == output[0]) o2.pop();
+            return output.concat(o2.reverse());
+        }
+
+        function prime_factor(n, p = 2) {
+            if (n <= 1) {
+                return [];
+            }
+            let upper_limit = Math.floor(Math.sqrt(n));
+            let start_time = (new Date()).getTime();
+            for (let x = p; x <= upper_limit; x++) {
+                if (n % x == 0) {
+                    let r = 1;
+                    n /= x;
+                    while (n % x == 0) { r++; n /= x }
+                    return [{ p: x, r: r }].concat(prime_factor(n, x + 1));
+                }
+                if (x % 100 == 0 && (new Date()).getTime() - start_time > 3000) {
+                    break;
+                }
+            }
+            return [{ p: n, r: 1 }];
+        }
+
+        function number_on_power(n) {
+            let out = '';
+            while (n > 0) {
+                out = ('º¹²³⁴⁵⁶⁷⁸⁹')[n % 10] + out;
+                n = Math.floor(n / 10);
+            }
+            return out;
+        }
+
+        const refresh_func = () => {
+            let new_inp_number = Math.round(+inp.value);
+            if (isFinite(new_inp_number) && new_inp_number >= 1) {
+                inp_number = new_inp_number;
+                inp.value = new_inp_number;
+                out_rand.innerHTML = `1和${inp_number}之间的随机整数: ` + (Math.floor(Math.random() * inp_number) + 1);
+                out_factors.innerHTML = "计算中...";
+                out_prime_factors.innerHTML = "计算中...";
+
+                let gf = get_factors(inp_number);
+                if (gf === undefined) {
+                    out_factors.innerHTML = "无法在合理的时间内找到全部因子..."
+                } else {
+                    out_factors.innerHTML = `${inp_number}的全部因子(共${gf.length}个): ` + gf.join(", ");
+                }
+
+                let pf = prime_factor(inp_number);
+                if (pf === undefined) {
+                    out_prime_factors.innerHTML = "无法在合理的时间内找到素因子..."
+                } else {
+                    out_prime_factors.innerHTML = `${inp_number}=` + pf.map((val) => `${val.p}${number_on_power(val.r)}`).join('x');
+                }
+
+            } else {
+                inp.value = inp_number;
+            }
+        }
+
+        let inp_number = 100;
+        inp.value = inp_number;
+        refresh_func();
+        inp.addEventListener("change", refresh_func)
+        but_rand.addEventListener("click", () => {
+            out_rand.innerHTML = `1和${inp_number}之间的随机整数: ` + (Math.floor(Math.random() * inp_number) + 1);
+        })
+
+    </script>
 </body>
+
 </html>

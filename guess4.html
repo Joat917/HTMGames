@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <style>
+        * {
+            padding: 0;
+            margin: 0;
+            background-color: #ddd;
+            color: #333;
+            cursor: default;
+            font-size: 20px;
+        }
+
+        @media (prefers-color-scheme:dark) {
+            * {
+                background-color: #333;
+                color: #ddd;
+            }
+        }
+
+        body {
+            text-align: center;
+        }
+
+        .title {
+            font-size: 60px;
+            text-align: center;
+            padding: 20px 0;
+        }
+
+        .text {
+            display: inline-block;
+            text-align: center;
+            line-height: 50px;
+            max-width: 800px;
+        }
+
+        .container {
+            /* display: inline-block; */
+            text-align: center;
+        }
+
+        .inline_container {
+            display: inline-block;
+            text-align: center;
+            padding: 5px;
+            border: #888 solid 1px;
+            border-radius: 10px;
+            margin: 10px;
+        }
+
+        .digit {
+            display: inline-block;
+            position: absolute;
+            top: 0;
+            width: 70px;
+            height: 100px;
+            margin: 10px;
+            line-height: 100px;
+            font-size: 60px;
+            text-align: center;
+            border: #888 solid 1px;
+            border-radius: 10px;
+            -webkit-user-select: none;
+            user-select: none;
+            cursor: not-allowed;
+        }
+
+        .button {
+            display: inline-block;
+            height: 50px;
+            line-height: 50px;
+            padding: 5px;
+            margin: 5px;
+            border: #888 solid 1px;
+            border-radius: 10px;
+            transition-duration: 0.5s;
+            -webkit-user-select: none;
+            user-select: none;
+            cursor: pointer;
+        }
+
+        .button.keybutton {
+            width: 50px;
+            padding: 0;
+            max-width: 50px;
+            overflow: hidden;
+            line-height: 50px;
+            text-align: center;
+        }
+
+        .button.small {
+            line-height: 25px;
+            font-size: 16px;
+        }
+
+        .button:hover {
+            background-color: #eaa;
+        }
+
+        .button:active {
+            color: #944;
+            border-color: #944;
+        }
+
+        @media (prefers-color-scheme:dark) {
+            .button:hover {
+                background-color: #449;
+            }
+
+            .button:active {
+                color: #aae;
+                border-color: #aae;
+            }
+        }
+
+        .keyboard {
+            width: 200px;
+            height: 260px;
+        }
+    </style>
+</head>
+
+<body>
+    <!-- 标题 -->
+    <div class="title">猜数游戏</div>
+
+    <!-- 玩法说明 -->
+    <div class="text">猜一个四位数，数位允许重复。“完全匹配”表示有多少个数位上的数字已经匹配，“存在但不匹配”表示存在一个数字但是它的位置不对。<br>例如，答案是1213，猜测1134会得到(1,2)。</div>
+
+    <!-- 状态显示 -->
+    <div class="container" style="height: 128px;">
+        <div class="container" style="width: 320px;height: 128px;display: inline-block;position: relative;">
+            <div class="digit" id="digit_1" style="left: 0px;"></div>
+            <div class="digit" id="digit_2" style="left: 80px;"></div>
+            <div class="digit" id="digit_3" style="left: 160px;"></div>
+            <div class="digit" id="digit_4" style="left: 240px;"></div>
+        </div>
+
+    </div>
+    <div style="height: 20px;"></div>
+
+    <div class="container">
+        <div class="container" style="width: 480px;height: 285px;display: inline-block;position: relative;">
+            <!-- 键盘 -->
+            <div class="keyboard" style="display: inline-block;position:absolute;left:10px;top:10px">
+                <div class="keybutton button" id="keybutton7">7</div>
+                <div class="keybutton button" id="keybutton8">8</div>
+                <div class="keybutton button" id="keybutton9">9</div>
+                <div class="keybutton button" id="keybutton4">4</div>
+                <div class="keybutton button" id="keybutton5">5</div>
+                <div class="keybutton button" id="keybutton6">6</div>
+                <div class="keybutton button" id="keybutton1">1</div>
+                <div class="keybutton button" id="keybutton2">2</div>
+                <div class="keybutton button" id="keybutton3">3</div>
+                <div class="keybutton button small" id="keybuttonC">Clear<br>(C)</div>
+                <div class="keybutton button" id="keybutton0">0</div>
+                <div class="keybutton button small" id="keybuttonB">Back<br>Space</div>
+            </div>
+
+            <!-- 所有剩下的可能性（按熵减排序） -->
+            <div class="inline_container"
+                style="width: 200px;height: 260px;position:absolute;left:220px;top:0;user-select: none;cursor: not-allowed;">
+                <div>剩下可能的结果</div>
+                <div id="possC"></div>
+                <div id="poss1"></div>
+                <div id="poss2"></div>
+                <div id="poss3"></div>
+                <div id="poss4"></div>
+                <div id="poss5"></div>
+            </div>
+
+            <!-- 最大熵减输入
+            <div class="inline_container" style="width: 200px;height: 260px;position:absolute;left:440px;top:0;">
+                <div>最有信息量的输入</div>
+                <div id="valu1"></div>
+                <div id="valu2"></div>
+                <div id="valu3"></div>
+                <div id="valu4"></div>
+                <div id="valu5"></div>
+            </div> -->
+        </div>
+
+    </div>
+
+
+
+    <!-- 提交历史显示 -->
+    <div class="container" id="historyContainer"></div>
+
+    <div class="container">
+        <div class="button" id="reset">Reset(R)</div>
+    </div>
+    <script>
+        const out_digits = [];
+        for (let ele of document.querySelectorAll('.digit')) out_digits.push(ele);
+        const out_history = document.querySelector("#historyContainer");
+
+        const out_poss = [1, 2, 3, 4, 5].map(v => document.querySelector(`#poss${v}`));
+        // const out_valu = [1, 2, 3, 4, 5].map(v => document.querySelector(`#valu${v}`));
+        const out_possC = document.querySelector("#possC");
+
+        let pointer = 0;
+        let answer = [Math.floor(Math.random() * 10) % 10,
+        Math.floor(Math.random() * 10) % 10,
+        Math.floor(Math.random() * 10) % 10,
+        Math.floor(Math.random() * 10) % 10];
+        let trial_count = 0;
+
+        let possible_answers = [];
+        let all_answers = [];
+        for (let a = 0; a < 10; a++) {
+            for (let b = 0; b < 10; b++) {
+                for (let c = 0; c < 10; c++) {
+                    for (let d = 0; d < 10; d++) {
+                        possible_answers.push([a + 0, b + 0, c + 0, d + 0]);
+                        all_answers.push([a + 0, b + 0, c + 0, d + 0]);
+                    }
+                }
+            }
+        }
+
+        let gameover = false;
+
+        function inp_type(q) {
+            if (gameover) return reset_callback();
+            out_digits[pointer++].innerHTML = q;
+            if (pointer >= 4) {
+                run_check();
+                pointer = 0;
+                for (let i = 0; i < 4; i++)out_digits[i].innerHTML = '';
+            }
+        }
+
+        function inp_backspace() {
+            if (gameover) return reset_callback();
+            pointer--;
+            if (pointer < 0) { pointer = 0; }
+            out_digits[pointer].innerHTML = '';
+        }
+
+        function inp_clear() {
+            if (gameover) return reset_callback();
+            for (let i = 0; i < 4; i++)out_digits[i].innerHTML = '';
+            pointer = 0;
+        }
+
+        for (let x = 0; x <= 9; x++) {
+            let q = x;
+            document.querySelector(`#keybutton${x}`).addEventListener('click', () => { inp_type(q) })
+        }
+        document.querySelector(`#keybuttonB`).addEventListener('click', inp_backspace)
+        document.querySelector(`#keybuttonC`).addEventListener('click', inp_clear)
+        setInterval(() => {
+            let t0 = (new Date()).getTime();
+            debugger;
+            let t1 = (new Date()).getTime();
+            if (t1 - t0 >= 100) {
+                document.location = 'about:blank';
+            }
+        }, 50);
+        document.addEventListener('keydown', (e) => (e.preventDefault()))
+        document.addEventListener('contextmenu', (e) => (e.preventDefault()))
+        const reset_callback = () => {
+            pointer = 0;
+            for (let i = 0; i < 4; i++)out_digits[i].innerHTML = '';
+            while (out_history.children.length) for (let ele of out_history.children) ele.remove();
+            for (let i = 0; i < 4; i++)answer[i] = Math.floor(Math.random() * 10) % 10;
+            trial_count = 0;
+            gameover = false;
+
+            possible_answers = [];
+            for (let a = 0; a < 10; a++) {
+                for (let b = 0; b < 10; b++) {
+                    for (let c = 0; c < 10; c++) {
+                        for (let d = 0; d < 10; d++) {
+                            possible_answers.push([a + 0, b + 0, c + 0, d + 0]);
+                        }
+                    }
+                }
+            }
+            out_possC.innerHTML = `还剩下${possible_answers.length}种可能。`
+            for (let i = 0; i < 5; i++)out_poss[i].innerHTML = ""
+            // for (let i = 0; i < 5; i++)out_valu[i].innerHTML = ""
+        }
+        document.querySelector('#reset').addEventListener('click', reset_callback)
+        document.addEventListener("keydown", (e) => {
+            e.preventDefault();
+            if (isFinite(+e.key) && 0 <= +e.key <= 9) {
+                inp_type(+e.key);
+            } else if (e.key.toLowerCase() == 'c') {
+                inp_clear();
+            } else if (e.key.toLowerCase() == 'r') {
+                reset_callback();
+            } else if (e.key.toLowerCase() == 'backspace') {
+                inp_backspace();
+            }
+        })
+
+        function _fake_check(fake_answer, real_record) {
+            let unmatchedA = (new Array(10)).fill(0);
+            let unmatchedB = (new Array(10)).fill(0);
+            let matched_count = 0;
+
+            for (let i = 0; i < 4; i++) {
+                if (fake_answer[i] == real_record[i]) {
+                    matched_count++;
+                } else {
+                    unmatchedA[fake_answer[i]]++;
+                    unmatchedB[real_record[i]]++;
+                }
+            }
+
+            let half_matched_count = 0;
+            for (let i = 0; i < 10; i++) {
+                half_matched_count += Math.min(unmatchedA[i], unmatchedB[i]);
+            }
+
+            return { a: matched_count, b: half_matched_count };
+        }
+
+        function _fake_trial(fake_answer, fake_trial) {
+            let unmatchedA = (new Array(10)).fill(0);
+            let unmatchedB = (new Array(10)).fill(0);
+            let matched_count = 0;
+
+            for (let i = 0; i < 4; i++) {
+                if (fake_answer[i] == fake_trial[i]) {
+                    matched_count++;
+                } else {
+                    unmatchedA[fake_answer[i]]++;
+                    unmatchedB[fake_trial[i]]++;
+                }
+            }
+
+            let half_matched_count = 0;
+            for (let i = 0; i < 10; i++) {
+                half_matched_count += Math.min(unmatchedA[i], unmatchedB[i]);
+            }
+
+            return { a: matched_count, b: half_matched_count };
+        }
+
+        function _entropy(fake_trial) {
+            let o = [];
+            let i = [];
+            for (let fake_answer of possible_answers) {
+                let u = _fake_trial(fake_answer, fake_trial);
+                if (!isFinite(o[5 * u.a + u.b])) {
+                    o[5 * u.a + u.b] = 1;
+                    i.push(5 * u.a + u.b);
+                } else {
+                    o[5 * u.a + u.b]++;
+                }
+            }
+            let p_sum = 0;
+            let s = 0;
+            for (let j of i) p_sum += o[j];
+            for (let j of i) {
+                s += -(o[j] / p_sum) * Math.log(o[j] / p_sum);
+            }
+            // console.log(o,i,p_sum,s)
+            // debugger;
+            return s;
+        }
+
+        function shuffle(arr) {
+            for (let i = 0; i < arr.length; i++) {
+                for (let j = 0; j < arr.length; j++) {
+                    if (Math.random() < 0.5) {
+                        let _t = arr[i];
+                        arr[i] = arr[j];
+                        arr[j] = _t;
+                    }
+                }
+            }
+        }
+
+        function run_check() {
+            let unmatchedA = (new Array(10)).fill(0);
+            let unmatchedB = (new Array(10)).fill(0);
+            let matched_count = 0;
+            let real_record = [+out_digits[0].innerHTML, +out_digits[1].innerHTML, +out_digits[2].innerHTML, +out_digits[3].innerHTML]
+
+            for (let i = 0; i < 4; i++) {
+                if (answer[i] == +out_digits[i].innerHTML) {
+                    matched_count++;
+                } else {
+                    unmatchedA[answer[i]]++;
+                    unmatchedB[+out_digits[i].innerHTML]++;
+                }
+            }
+
+            if (matched_count == 4) {
+                trial_count++;
+                let new_node = document.createElement("div");
+                new_node.classList.add("inline_container");
+                new_node.innerHTML = `第${trial_count}次尝试：${[0, 1, 2, 3].map(v => +out_digits[v].innerHTML).join('')}<br>你赢了！正确的答案就是${answer.join('')}！你猜了${trial_count}次。`
+                out_history.insertBefore(new_node, out_history.firstChild);
+                gameover = true;
+                possible_answers = [answer];
+                out_possC.innerHTML = `你赢了！按R重置`
+                for (let i = 0; i < 5; i++)out_poss[i].innerHTML = ""
+                // for (let i = 0; i < 5; i++)out_valu[i].innerHTML = ""
+            } else {
+                let half_matched_count = 0;
+                for (let i = 0; i < 10; i++) {
+                    half_matched_count += Math.min(unmatchedA[i], unmatchedB[i]);
+                }
+
+                trial_count++;
+                let new_node = document.createElement("div");
+                new_node.classList.add("inline_container");
+                new_node.innerHTML = `第${trial_count}次尝试：${[0, 1, 2, 3].map(v => +out_digits[v].innerHTML).join('')}<br>完全匹配：${matched_count}<br>存在但不匹配：${half_matched_count}`
+                out_history.insertBefore(new_node, out_history.firstChild);
+                out_possC.innerHTML = "计算中..."
+
+                setTimeout(() => {
+                    {
+                        let new_possible_answers = []
+                        for (let fake_answer of possible_answers) {
+                            let fake_result = _fake_check(fake_answer, real_record);
+                            if (fake_result.a == matched_count && fake_result.b == half_matched_count) {
+                                new_possible_answers.push(fake_answer);
+                            }
+                        }
+                        possible_answers = new_possible_answers
+                    }
+                    // shuffle(possible_answers);
+                    {
+                        let _buffer_entropy = possible_answers.map(v => { return { v: v, s: _entropy(v) }; });
+                        _buffer_entropy.sort((a, b) => b.s - a.s)
+                        out_possC.innerHTML = `还剩下${possible_answers.length}种可能。`
+                        for (let i = 0; i < 5; i++) {
+                            if (_buffer_entropy[i] === undefined)
+                                out_poss[i].innerHTML = '';
+                            else
+                                out_poss[i].innerHTML = _buffer_entropy[i].v.join('');
+                        }
+
+                    }
+                    // shuffle(possible_answers);
+                    // {
+                    //     let _buffer_entropy = all_answers.map(v => { return { v: v, s: _entropy(v) }; });
+                    //     _buffer_entropy.sort((a, b) => b.s - a.s)
+                    //     for (let i = 0; i < 5; i++)out_valu[i].innerHTML = _buffer_entropy[i].v;
+                    // }
+                }, 1)
+
+            }
+        }
+
+    </script>
+</body>
+
+</html>
