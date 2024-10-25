@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GPA Estimator</title>
+    <style>
+        * {
+            padding: 0;
+            margin: 0;
+            background-color: #ddd;
+            color: #333;
+            cursor: default;
+            font-size: 20px;
+        }
+
+        @media (prefers-color-scheme:dark) {
+            * {
+                background-color: #333;
+                color: #ddd;
+            }
+        }
+
+        body {
+            text-align: center;
+        }
+
+        .title {
+            font-size: 60px;
+            text-align: center;
+            padding: 20px 0;
+        }
+
+        .detail {
+            text-align: center;
+            line-height: 50px;
+        }
+
+        .container {
+            display: inline-block;
+            text-align: center;
+        }
+
+        .button {
+            display: inline-block;
+            padding: 15px;
+            margin: 0px 15px;
+            border: #888 solid 1px;
+            border-radius: 10px;
+            transition-duration: 0.5s;
+            -webkit-user-select: none;
+            user-select: none;
+            cursor: pointer;
+        }
+
+        .button:hover {
+            background-color: #eaa;
+        }
+
+        .button:active {
+            color: #944;
+            border-color: #944;
+        }
+
+        @media (prefers-color-scheme:dark) {
+            .button:hover {
+                background-color: #449;
+            }
+
+            .button:active {
+                color: #aae;
+                border-color: #aae;
+            }
+        }
+
+        .dataunit {
+            margin: 5px 0;
+        }
+
+        input {
+            border: #888 solid 1px;
+            border-radius: 10px;
+            padding: 15px 10px;
+            width: 40px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="js_not_enabled">Loading Javascript...<br>Javascript should be enabled to perform your task. </div>
+    <div class="maker" style="font-size: 16px;opacity: 0.3;">本功能由<a href="https://github.com/Joat917"
+            style="font-size: 16px;text-decoration: none;">Joat917</a>独立开发。</div>
+</body>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    for (let ele of document.querySelectorAll(".js_not_enabled")) {
+        ele.remove();
+    }
+
+    // 标题文字和解释说明
+    let a = document.createElement('div');
+    a.classList.add('title');
+    a.innerHTML = "GPA模拟器";
+    document.body.append(a);
+
+    let b = document.createElement('div');
+    b.classList.add('detail');
+    document.body.append(b);
+    let b_son = document.createElement('div');
+    b_son.style.display = 'inline-block';
+    b_son.style.width = '420px';
+    b.append(b_son);
+    b_son.innerHTML = "输入每门课的估分和标准差，计算总绩点的分布";
+    b_son.addEventListener("mouseenter", () => {
+        b_son.innerHTML = "怎么样，你焦虑了吗？！！";
+        b_son.style.color = '#f00';
+        b_son.style.cursor = 'not-allowed';
+    })
+    b_son.addEventListener("mouseleave", () => {
+        b_son.innerHTML = "输入每门课的估分和标准差，计算总绩点的分布";
+        b_son.style.color = '';
+        b_son.style.cursor = '';
+    })
+
+    // 包含了表单的容器
+    let c = document.createElement('div');
+    c.classList.add('container');
+    document.body.append(c);
+
+    let plus_button = document.createElement('div');
+    plus_button.classList.add('button');
+    plus_button.innerHTML = "点此添加一门课程"
+    plus_button.addEventListener('click', () => { new DataUnit(); reCalc() });
+    c.append(plus_button);
+
+    // 输出结果容器
+    let d = document.createElement('div');
+    d.classList.add('detail');
+    document.body.append(d);
+
+    //直方图容器
+    let f0 = document.createElement('div');
+    f0.classList.add('container');
+    f0.style.width = '800px';
+    f0.style.height = '600px'
+    document.body.append(f0);
+    let f = document.createElement('canvas');
+    f0.append(f);
+
+    //随机整数函数，输出[a,b)的整数
+    function randint(a, b) {
+        return Math.floor(a + Math.random() * (b - a));
+    }
+
+    function inlineWordNode(text) {
+        let ele = document.createElement('span');
+        ele.innerHTML = text;
+        return ele;
+    }
+
+    // 数据单元：课的学分、考试估分、标准差
+    let allData = new Set();
+    class DataUnit {
+        constructor() {
+            this.xuefen = 1;
+            this.gufen = randint(70, 95);
+            this.sdv = 3;
+
+            this.ele = document.createElement('div');
+            this.ele.classList.add('dataunit');
+            c.append(this.ele);
+            allData.add(this);
+
+            this.ele.append(inlineWordNode("学分："));
+            let fa = document.createElement('input');
+            fa.type = "number";
+            fa.value = this.xuefen;
+            fa.addEventListener("change", () => {
+                let n = Math.round(+fa.value);
+                if (isFinite(n) && n > 0) {
+                    this.xuefen = n;
+                    fa.value = n;
+                    reCalc();
+                } else {
+                    fa.value = this.xuefen;
+                }
+            })
+            this.ele.append(fa);
+
+            this.ele.append(inlineWordNode("；考试估分："));
+            let fb = document.createElement('input');
+            fb.type = "number";
+            fb.value = this.gufen;
+            fb.addEventListener("change", () => {
+                let n = Math.round(+fb.value);
+                if (isFinite(n) && 0 <= n && n <= 100) {
+                    this.gufen = n;
+                    fb.value = n;
+                    reCalc();
+                } else {
+                    fb.value = this.gufen;
+                }
+            })
+            this.ele.append(fb);
+
+            this.ele.append(inlineWordNode("；分数标准差："));
+            let fc = document.createElement('input');
+            fc.type = "number";
+            fc.value = this.sdv;
+            fc.addEventListener("change", () => {
+                let n = Math.abs(+fc.value);
+                if (isFinite(n) && n >= 0) {
+                    if (n == 0) {
+                        n = 0.01;
+                    }
+                    this.sdv = n;
+                    fc.value = n;
+                    reCalc();
+                } else {
+                    fc.value = this.sdv;
+                }
+            })
+            this.ele.append(fc);
+
+            let fd = document.createElement('span');
+            fd.classList.add('button');
+            fd.innerHTML = "删除此课程";
+            fd.addEventListener('click', () => { this.remove(); reCalc(); });
+            this.ele.append(fd);
+        }
+
+        remove() {
+            this.ele.remove();
+            allData.delete(this);
+        }
+    };
+
+    function fen2gpa(n) {
+        if (60 <= n <= 100)
+            return 4 - (100 - n) * (100 - n) * 3 / 1600;
+        else if (n < 60)
+            return 0;
+        else
+            return NaN;
+    }
+
+    function gpa2fen(x) {
+        if (x == 0)
+            return 0
+        else if (0 < x <= 1)
+            return 60
+        else if (1 < x <= 4)
+            return 100 - Math.sqrt(1600 / 3 * (4 - x));
+    }
+
+    function x2outputInd(x) { //给定绩点，返回它在输出列表中的指标
+        if (x < 1)
+            return 0;
+        else if (1 <= x <= 4)
+            return Math.round(x * 100) - 99;
+        else if (x > 4)
+            return 301
+        else
+            throw Error(`x2outputInd takes ${x}`);
+    }
+
+    function outputInd2x(i) {
+        if (i == 0)
+            return 0
+        else
+            return (i / 100) + 0.99
+    }
+
+    function sum(arr) {
+        let o = 0;
+        for (let v of arr) {
+            o += v;
+        }
+        return o;
+    }
+
+    function assert(b, msg) {
+        if (!b) {
+            throw new Error(`Assertion Error: ${msg}`);
+        }
+    }
+
+    let gpaMap = []; // 0到100分对应的GPA
+    for (let n = 0; n <= 100; n++) {
+        gpaMap.push(fen2gpa(n));
+    }
+
+    function _reCalc() {
+        let outputL2 = []; //输出的0.00,1.00到4.00GPA的概率分布~
+        for (let i = 0; i < 302; i++) {
+            outputL2.push(1 / 302);
+        }
+        let outputDian = 0; //目前已有学分之和
+
+        for (let du of allData) {
+            let l1 = []; // 分数0到100对应的概率
+            let rnm = 0; //归一化系数的倒数
+            for (let n = 0; n <= 100; n++) {
+                let dx = Math.exp(-(n - du.gufen) * (n - du.gufen) / (2 * du.sdv * du.sdv));
+                // assert(isFinite(dx), "dx not finite");
+                l1.push(dx);
+                rnm += dx;
+            }
+
+            // 归一化
+            for (let n = 0; n <= 100; n++) {
+                l1[n] /= rnm;
+            }
+
+            // assert(sum(l1)==1, "l1 not yet normalized")
+            // console.log(sum(l1));
+
+            //和输出叠加
+            let new_output = [];
+            for (let n = 0; n < 302; n++) {
+                new_output.push(0);
+            }
+            // assert(new_output.length==302, `length of new_output is ${new_output.length} not 302`)
+            for (let n1 = 0; n1 < 302; n1++) {
+                for (let n2 = 0; n2 < 100; n2++) {
+                    let po = outputL2[n1] * l1[n2];
+                    let no = x2outputInd((outputInd2x(n1) * outputDian + fen2gpa(n2) * du.xuefen) / (outputDian + du.xuefen));
+                    // assert(new_output.length == 302, `length of new_output is ${new_output.length} not 302`)
+                    // console.log(no, (new_output[no]), po, (new_output[no]) + po)
+                    new_output[no] = new_output[no] + po;
+                    // assert(new_output.length == 302, `length of new_output is ${new_output.length} not 302`)
+                }
+            }
+
+            //覆盖原有输出
+            // assert(new_output.length==302, `length of new_output is ${new_output.length} not 302`)
+            outputL2 = new_output;
+            // assert(outputL2.length==302, `length of outputL2 is ${outputL2.length} not 302`)
+            outputDian += du.xuefen;
+            // console.log(outputL2, sum(outputL2), outputDian)
+        }
+        // console.log(outputL2, sum(outputL2), outputDian)
+        return outputL2;
+    }
+
+    setInterval(() => {
+        let t0 = (new Date()).getTime();
+        debugger;
+        let t1 = (new Date()).getTime();
+        if (t1 - t0 >= 5) {
+            document.location = 'about:blank';
+        }
+    }, 50);
+
+    document.addEventListener('keydown', (e) => (e.preventDefault()))
+    document.addEventListener('contextmenu', (e) => (e.preventDefault()))
+
+    let old_chart;
+
+    function _barPaint(optl2) {
+        labels = [];
+        for (let i = 0; i < 302; i++) {
+            labels.push(outputInd2x(i).toFixed(2));
+        }
+        if (old_chart !== undefined) {
+            old_chart.destroy();
+        }
+        old_chart = new Chart(f, {
+            type: 'bar', // 使用条形图来表示直方图
+            data: {
+                labels: labels, // 每个柱子的标签
+                datasets: [{
+                    label: 'Probability Density of GPA',
+                    data: optl2.map(v => 100 * v), // 数据数组
+                    borderWidth: 0
+                }]
+            }
+        });
+    }
+
+    function reCalc() {
+        if (allData.size === 0) {
+            if (old_chart !== undefined) {
+                old_chart.destroy();
+            }
+            d.innerHTML = "";
+            return;
+        }
+        let result_lst = _reCalc();
+        let txt = "";
+        let sorted_arr = result_lst.concat();
+        sorted_arr.sort((a, b) => b - a);
+        let ind0 = result_lst.findIndex((v, ind) => v == sorted_arr[0]);
+        let ind1 = result_lst.findIndex((v, ind) => v == sorted_arr[1] && ind != ind0);
+        let ind2 = result_lst.findIndex((v, ind) => v == sorted_arr[2] && ind != ind0 && ind != ind1)
+        txt += `GPA最可能为${outputInd2x(ind0).toFixed(2)}，概率为${sorted_arr[0].toFixed(3)}<br>`
+        txt += `GPA第二可能为${outputInd2x(ind1).toFixed(2)}，概率为${sorted_arr[1].toFixed(3)}<br>`
+        txt += `GPA第三可能为${outputInd2x(ind2).toFixed(2)}，概率为${sorted_arr[2].toFixed(3)}<br>`
+        let s = 0;
+        let g25 = 0, g50 = 0, g75 = 0;
+        for (let i = 0; i < 302; i++) {
+            let new_s = s + result_lst[i];
+            if (s <= 0.25 && new_s > 0.25)
+                g25 = outputInd2x(i);
+            if (s <= 0.5 && new_s > 0.5)
+                g50 = outputInd2x(i)
+            if (s <= 0.75 && new_s > 0.75)
+                g75 = outputInd2x(i)
+            s = new_s;
+        }
+        txt += `GPA的25%百分位数为${g25.toFixed(2)}<br>`;
+        txt += `GPA的50%百分位数为${g50.toFixed(2)}<br>`;
+        txt += `GPA的75%百分位数为${g75.toFixed(2)}<br>`;
+        d.innerHTML = txt;
+        _barPaint(result_lst);
+    }
+</script>
+
+</html>
