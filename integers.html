@@ -90,7 +90,14 @@
     <div class="title">整数分析</div>
     <!-- 输入一个整数 -->
     <div class="container">
-        <input type="number" id="number_input">
+        <input type="text" id="number_input">
+    </div>
+    <br>
+
+    <!-- 从1到这个整数之间生成一个随机数 -->
+    <div class="container">
+        <div class="text" id="random_int"></div>
+        <div class="button" id="random_int_but">生成</div>
     </div>
     <br>
 
@@ -106,11 +113,6 @@
     </div>
     <br>
 
-    <!-- 从1到这个整数之间生成一个随机数 -->
-    <div class="container">
-        <div class="text" id="random_int"></div>
-        <div class="button" id="random_int_but">生成</div>
-    </div>
     <script>
         const inp = document.querySelector("#number_input");
         const out_prime_factors = document.querySelector("#prime_factors");
@@ -119,15 +121,47 @@
         const but_rand = document.querySelector("#random_int_but");
         for (let x of document.querySelectorAll('.js_not_enabled')) x.remove();
 
+        function bigIntSqrt(n) {
+            if (n === BigInt(0) || n === BigInt(1)) return n;
+            if (n < 0) throw new Error("square root of negative number");
+            let low = BigInt(1);
+            let high = n;
+            while (low <= high) {
+                let mid = (low + high) / BigInt(2);
+                let midSquared = mid * mid;
+
+                if (midSquared === n) return mid;
+                else if (midSquared < n) {
+                    let nextMidSquared = (mid + BigInt(1)) * (mid + BigInt(1));
+                    if (nextMidSquared > n) return mid;
+                    low = mid + BigInt(1);
+                } else {
+                    high = mid - BigInt(1);
+                }
+            }
+        }
+
+        async function randomBigInt(max) {
+            const maxBinLength = max.toString(2).length;
+            const byteLength = Math.ceil(maxBinLength / 8);
+            let rand;
+            do {
+                const buffer = new Uint8Array(byteLength);
+                await crypto.getRandomValues(buffer);
+                rand = BigInt(`0x${buffer.reduce((str, byte) => str + byte.toString(16).padStart(2, '0'), '')}`);
+            } while (rand > max);
+            return rand;
+        }
+
         function get_factors(n) {
-            let upper_limit = Math.floor(Math.sqrt(n));
+            let upper_limit = bigIntSqrt(n);
             let output = [];
             let start_time = (new Date()).getTime();
-            for (let x = 1; x <= upper_limit; x++) {
+            for (let x = 1n; x <= upper_limit; x++) {
                 if (n % x == 0) {
                     output.push(x);
                 }
-                if (x % 100 == 0 && (new Date()).getTime() - start_time > 3000) {
+                if (x % 100n == 0 && (new Date()).getTime() - start_time > 3000) {
                     return undefined;
                 }
             }
@@ -136,27 +170,110 @@
             return output.concat(o2.reverse());
         }
 
-        function prime_factor(n, p = 2) {
+        function prime_factor(n){
+            factoring_timeout=false;
+            return _prime_factor(n);
+        }
+
+        function _prime_factor(n, p = 2n) {
             if (n <= 1) {
                 return [];
             }
-            let upper_limit = Math.floor(Math.sqrt(n));
+            if(millerRabin(n)){return [{ p: n, r: 1 }];}
+            let upper_limit = bigIntSqrt(n);
             let start_time = (new Date()).getTime();
             for (let x = p; x <= upper_limit; x++) {
                 if (n % x == 0) {
                     let r = 1;
                     n /= x;
                     while (n % x == 0) { r++; n /= x }
-                    return [{ p: x, r: r }].concat(prime_factor(n, x + 1));
+                    return [{ p: x, r: r }].concat(prime_factor(n, x + 1n));
                 }
-                if (x % 100 == 0 && (new Date()).getTime() - start_time > 3000) {
+                if (x % 100n == 0 && (new Date()).getTime() - start_time > 3000) {
+                    factoring_timeout=true;
                     break;
                 }
             }
             return [{ p: n, r: 1 }];
         }
 
+        function millerRabin(n, k = 40) {
+            if (n < 2n) return false;
+            if (n === 2n || n === 3n) return true;
+            if (n % 2n === 0n) return false;
+
+            let d = n - 1n;
+            let r = 0;
+            while (d % 2n === 0n) {
+                d /= 2n;
+                r++;
+            }
+
+            for (let i = 0; i < k; i++) {
+                const a = BigInt(2 + Math.floor(Math.random() * (Number(n - 2n))));
+                let x = modPow(a, d, n);
+
+                if (x === 1n || x === n - 1n) continue;
+
+                let continueOuter = false;
+                for (let j = 0; j < r - 1; j++) {
+                    x = modPow(x, 2n, n);
+                    if (x === n - 1n) {
+                        continueOuter = true;
+                        break;
+                    }
+                }
+                if (continueOuter) continue;
+
+                return false;
+            }
+
+            return true;
+        }
+
+        function modPow(base, exponent, modulus) {
+            if (modulus === 1n) return 0n;
+            let result = 1n;
+            base = base % modulus;
+            while (exponent > 0n) {
+                if (exponent % 2n === 1n)
+                    result = (result * base) % modulus;
+                exponent = exponent / 2n;
+                base = (base * base) % modulus;
+            }
+            return result;
+        }
+
+        function get_factors_2(arr){
+            const _cmp=(a,b)=>{
+                if(a>b)return 1;
+                else if(a==b) return 0;
+                else return -1;
+            }
+            if(arr.length==0){
+                return [1n];
+            }else if(arr.length==1){
+                let o=[];
+                let a=arr[0];
+                for(let i=0n;i<=a.r;i++)o.push(a.p**i);
+                return o.sort(_cmp);
+            }else{
+                arr=new Array(...arr);
+                let o=[];
+                let a=arr.shift();
+                let o2=get_factors_2(arr);
+                for(let i=0n;i<=a.r;i++){
+                    for(let n of o2){
+                        o.push(a.p**i*n);
+                    }
+                }
+                return o.sort(_cmp);
+            }
+        }
+
+
         function number_on_power(n) {
+            if (n == 1) return ''
             let out = '';
             while (n > 0) {
                 out = ('º¹²³⁴⁵⁶⁷⁸⁹')[n % 10] + out;
@@ -166,40 +283,48 @@
         }
 
         const refresh_func = () => {
-            let new_inp_number = Math.round(+inp.value);
-            if (isFinite(new_inp_number) && new_inp_number >= 1) {
-                inp_number = new_inp_number;
-                inp.value = new_inp_number;
-                out_rand.innerHTML = `1和${inp_number}之间的随机整数: ` + (Math.floor(Math.random() * inp_number) + 1);
-                out_factors.innerHTML = "计算中...";
-                out_prime_factors.innerHTML = "计算中...";
-
-                let gf = get_factors(inp_number);
-                if (gf === undefined) {
-                    out_factors.innerHTML = "无法在合理的时间内找到全部因子..."
-                } else {
-                    out_factors.innerHTML = `${inp_number}的全部因子(共${gf.length}个): ` + gf.join(", ");
-                }
-
-                let pf = prime_factor(inp_number);
-                if (pf === undefined) {
-                    out_prime_factors.innerHTML = "无法在合理的时间内找到素因子..."
-                } else {
-                    out_prime_factors.innerHTML = `${inp_number}=` + pf.map((val) => `${val.p}${number_on_power(val.r)}`).join('x');
-                }
-
-            } else {
+            let new_inp = inp.value;
+            if (!(/^\d+$/.test(new_inp))) {
                 inp.value = inp_number;
+                return;
+            }
+            inp_number = BigInt(new_inp);
+            inp.value = inp_number;
+            randomBigInt(inp_number).then((v) => { out_rand.innerHTML = `1和${inp_number}之间的随机整数: ${v}` });
+            out_factors.innerHTML = "计算中...";
+            out_prime_factors.innerHTML = "计算中...";
+
+            if(millerRabin(inp_number)){
+                out_factors.innerHTML = `${inp_number}的全部因子(共2个): 1, ${inp_number}`;
+                out_prime_factors.innerHTML = `${inp_number}=${inp_number}`;
+                return;
+            }
+
+            let pf = prime_factor(inp_number);
+            if (pf === undefined) {
+                out_prime_factors.innerHTML = "无法在合理的时间内找到素因子..."
+            } else {
+                out_prime_factors.innerHTML = `${inp_number}=` + pf.map((val) => `${val.p}${number_on_power(val.r)}`).join('x');
+                if(factoring_timeout){
+                    out_prime_factors.innerHTML+="<br>由于计算超时，结果并不准确。实际因子个数会比这里展示的更多！"
+                }
+            }
+
+            // let gf = get_factors(inp_number);
+            let gf=get_factors_2(pf);
+            if (gf === undefined) {
+                out_factors.innerHTML = "无法在合理的时间内找到全部因子..."
+            } else {
+                out_factors.innerHTML = `${inp_number}的全部因子(共${gf.length}个): ` + gf.join(", ");
             }
         }
 
+        let factoring_timeout=false;
         let inp_number = 100;
         inp.value = inp_number;
         refresh_func();
         inp.addEventListener("change", refresh_func)
-        but_rand.addEventListener("click", () => {
-            out_rand.innerHTML = `1和${inp_number}之间的随机整数: ` + (Math.floor(Math.random() * inp_number) + 1);
-        })
+        but_rand.addEventListener("click", () => { randomBigInt(inp_number).then((v) => { out_rand.innerHTML = `1和${inp_number}之间的随机整数: ${v}` }) })
 
     </script>
 </body>

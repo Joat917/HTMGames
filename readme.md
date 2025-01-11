@@ -22,18 +22,16 @@ It is the also most suitable place for a code file to settle and develop and mak
 
 ### What's Inside?
 
-Only Htm files and their corresponding css and js files.
+Only HTML files and their corresponding css and js files. 
 
 - `./GlowingCornerHoverEffect.htm` When you put your mouse on the shapes, there are amazing lights shed on it. 
-- `./MswHtm.htm` Minesweeper game with the worst experience. Believe me, you'll get mad about it. *(Try https://minesweeper.cn instead)*
+- `./MswHtm.htm` A naive minesweeper game.
 - `./sdk6.htm` Soduku game that enables the simplest cheating. 
 - `./switch.htm` A dragging switch with fancy effects. A little boring, but boring people like me love it.  
-- `./guess4.html` A game to guess a 4-digit integer with only a few feedbacks. *(Unavailable)*
-- `./homo.html` A tool to express any number in terms of `114514` or `1919810`. *(Unavailable)*
-- `./homointerpretation.html` To show how homo tool works. *(Unavailable)*
-- `./gpa.html` GPA estimator for PKUers. Standard Deviation Estimation Methods enabled to increase GPA anxiety. 
-- `./bpm.html` Tap the buttons to obtain BPM of any rhythm. *(Unavailable)*
-- `./integers.html` Tell whether an integer is a prime, its factors and prime factors (if possible). Also generate random positive integer from 1 to N. *(Unavailable)*
+- `./guess4.html` A game to guess a 4-digit integer with only a few feedbacks. 
+- `./homo.html` A tool to express any integer or decimal in terms of certain combinations of `114514` , `1919810` as well as 999,999 different numbers! It also shows how this works properly no matter how you make up your inputs, step by step. Unfortunately this feature is in Chinese only, so maybe you need to get your translator done to use it. (Updated on Jan.12th,2025)
+- `./gpa.html` GPA estimator for PKUers. Standard Deviation Estimation Methods enabled to intensify GPA anxiety. Time by tick save the children suffering from PKU! 
+- `./integers.html` Tell whether an integer is a prime, its factors and prime factors (if possible). Also generate random positive integer from 1 to N. (Updated on Jan.12th,2025)
 - `./index.html` The home page...
 
 ### PS
