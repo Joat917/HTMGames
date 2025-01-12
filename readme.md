@@ -29,12 +29,7 @@ Only HTML files and their corresponding css and js files.
 - `./sdk6.htm` Soduku game that enables the simplest cheating. 
 - `./switch.htm` A dragging switch with fancy effects. A little boring, but boring people like me love it.  
 - `./guess4.html` A game to guess a 4-digit integer with only a few feedbacks. 
-- `./homo.html` A tool to express any integer or decimal in terms of certain combinations of `114514` , `1919810` as well as 999,999 different numbers! It also shows how this works properly no matter how you make up your inputs, step by step. Unfortunately this feature is in Chinese only, so maybe you need to get your translator done to use it. (Updated on Jan.12th,2025)
+- `./homo.html` A tool to express any integer or decimal in terms of certain combinations of `114514` , `1919810` as well as 999,999 different numbers! It also shows how this works properly no matter how you make up your inputs, step by step. Unfortunately this feature is in Chinese only, so maybe you need to get your translator done to use it. 
 - `./gpa.html` GPA estimator for PKUers. Standard Deviation Estimation Methods enabled to intensify GPA anxiety. Time by tick save the children suffering from PKU! 
-- `./integers.html` Tell whether an integer is a prime, its factors and prime factors (if possible). Also generate random positive integer from 1 to N. (Updated on Jan.12th,2025)
+- `./integers.html` Tell whether an integer is a prime, its factors and prime factors (if possible). Also generate random positive integer from 1 to N. 
 - `./index.html` The home page...
-
-### PS
-
-1. Some files are not yet available. I'll add them later.
-2. I haven't yet resorted to AI for help, so let me think over it...
