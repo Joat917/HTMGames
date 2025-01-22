@@ -1,8 +1,6 @@
 # HTMGames
 
-[Visit HomePage](https://html-preview.github.io/?url=https://github.com/Joat917/HTMGames/blob/main/index.html)
-
-*(Although it doesn't exist, I'll eventually finish it out... --Oct.24,2024)*
+[Visit HomePage](https://joat917.github.io/HTMGames/index.html)
 
 ### Why Here on Github?
 
