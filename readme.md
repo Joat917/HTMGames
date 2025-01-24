@@ -30,4 +30,5 @@ Only HTML files and their corresponding css and js files.
 - `./homo.html` A tool to express any integer or decimal in terms of certain combinations of `114514` , `1919810` as well as 999,999 different numbers! It also shows how this works properly no matter how you make up your inputs, step by step. Unfortunately this feature is in Chinese only, so maybe you need to get your translator done to use it. 
 - `./gpa.html` GPA estimator for PKUers. Standard Deviation Estimation Methods enabled to intensify GPA anxiety. Time by tick save the children suffering from PKU! 
 - `./integers.html` Tell whether an integer is a prime, its factors and prime factors (if possible). Also generate random positive integer from 1 to N. 
+- `./electivePoints.html` A tool used to distribute points when choosing electives. This is specially designed for PKUers. 
 - `./index.html` The home page...
