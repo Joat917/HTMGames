@@ -4,13 +4,15 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>投点计算器</title>
-    <link rel="stylesheet" href="electivePoints.css">
+    <link rel="stylesheet" href="style.css">
+    <link rel="shortcut icon" href="/favicon.ico" type="image/x-icon">
 </head>
 <body>
     <div style="min-width: 844px;">
         <div class="author">本功能由<a href="https://github.com/Joat917" target="_blank">Joat917</a>独立开发</div>
+        <div class="js_not_enabled">Loading Javascript...<br>Javascript should be enabled to perform your task. </div>
         <div class="caption">
-            <span style="display:inline;font-size:small;cursor:pointer;" id="dark_switch">☀️</span>
+            <span style="display:inline;font-size:small;cursor:pointer;" class="dark_switch">☀️</span>
             高级投点计算器
             <span style="display:inline;font-size:small;">v1.1</span>
         </div>
@@ -125,7 +127,7 @@
                 <p>
             </div>
 
-            <div style="border-top:#888 2px solid"></div>
+            <div class="seperator"></div>
 
             <h4>关于三个模型</h4>
             <div class="text_section">
@@ -134,25 +136,23 @@
                 <p style="display:inline;">
                     经典：沿用了学长留下的公式。假设已选/限选人数为x，首先计算y=(x-1)^(1/8)+1，然后计算z=-101*y^2+392.6*y-347.8，最后计算w=0.92z+0.08*99，那么w就是其他人的平均投点数量。
                     这个公式也许有些抽象，但是事实上它是一个在x=1.6附近取到峰值39、之后缓慢下降的曲线。
-                    你可以尝试在<a href="https://www.desmos.com/calculator" style="text-decoration:none;display:inline;"
-                        target="_blank">Desmos</a>中绘制它的图象。
+                    你可以尝试在<a href="https://www.desmos.com/calculator" target="_blank">Desmos</a>中绘制它的图象。
                 </p>
                 <p>平凡：所有人在所有情况下投入37点</p>
                 <p>激烈：所有人在所有情况下投入73点。适用于你认为存在大量同学99点all-in的课程。</p>
             </div>
 
-            <div style="border-top:#888 2px solid"></div>
+            <div class="seperator"></div>
 
             <h4>关于计算公式</h4>
             <div class="text_section">
                 <p>在已选人数是n，限选人数是m，而你的投点是其他人平均投点的a倍的情况下，你被选上的概率是：</p>
                 <p>P = 1 - Prod(i from 1 to m)[(n-i)/(n-i+a)]</p>
-                <p style="display:inline;">在某些条件下，这个公式可以被近似<s
-                        style="display:inline;">，但在计算机强大算力的加持下显得毫无意义</s>。我没有使用任何近似，直接套用原公式进行计算。</p>
+                <p style="display:inline;">在某些条件下，这个公式可以被近似<s>，但在计算机强大算力的加持下显得毫无意义</s>。我没有使用任何近似，直接套用原公式进行计算。</p>
                 <p>在给定总可分配点数不变的情况下，综合投点模块协调你的投点，使得选上概率的加权平均最大。</p>
             </div>
 
-            <div style="border-top:#888 2px solid"></div>
+            <div class="seperator"></div>
 
             <h4>关于我的独创内容</h4>
 
@@ -169,18 +169,18 @@
                 </p>
             </div>
 
-            <div style="border-top:#888 2px solid"></div>
+            <div class="seperator"></div>
 
             <h4>关于开发者</h4>
 
             <div class="text_section">
-                <p style="display: inline;">我是谁？<a href="https://github.com/Joat917" target="_blank"
-                        style="display: inline;text-decoration: none;">Joat917</a>，一只闲得舔爪子的不搞开发的学牲。我利用课余时间，只制作我喜欢的功能和界面，为我自己服务；也乐于分享自己的工具，力所能及的帮助其他人。
+                <p style="display: inline;">我是谁？<a href="https://github.com/Joat917" target="_blank">Joat917</a>，一只闲得舔爪子的不搞开发的学牲。我利用课余时间，只制作我喜欢的功能和界面，为我自己服务；也乐于分享自己的工具，力所能及的帮助其他人。
                 </p>
             </div>
         </div>
         <div style="height: 30px"></div>
     </div>
+    <script src="common.js"></script>
     <script src="electivePoints.js"></script>
 </body>
 </html>

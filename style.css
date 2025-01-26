@@ -1,0 +1,272 @@
+/* 
+为本站定制的公用样式表。广泛使用了flex布局，并使用了data-theme来判断是否是暗黑模式。
+1. 每个模块使用div.section包围；
+2. 大标题单独使用div.caption包括，模块标题使用div.section_caption；
+3. input[type=checkbox]应使用如下形式的标签：
+<div class="checkbox_container">
+    <input type="checkbox" id="*whatever">
+    <label for="*whatever" class="checkbox_label">文本</label>
+</div>
+
+4. 关于表格，将table用div.table；tr用div.row；td用div.cell；th用div.cell.bold代替。
+5. 使用div.button作为按钮，div.inline_button作为行内按钮，div.err_message作为异常显示
+6. 使用div.text_section之内的p对象包含文字。
+7. 使用div.seperator进行分隔。
+8. 暗黑模式的按钮均使用div.dark_switch，并需要包含darkModeControl.js进行控制。
+*/
+
+* {
+    padding: 0;
+    margin: 0;
+    -webkit-user-select: none;
+    user-select: none;
+    --bg-color: #ddd;
+    --fg-color: #222;
+    --bg-color-hover: #eaa;
+    --bg-color-active: #944;
+    --bg-color-stress: #8e8;
+
+    background-color: var(--bg-color);
+    color: var(--fg-color);
+    transition: color 0.3s, background-color 0.3s;
+}
+
+body{
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+}
+
+/* 适配暗黑模式和移动端 */
+
+body[data-theme="dark"] {
+    background-color: #222;
+}
+
+[data-theme="dark"] * {
+    --bg-color: #222;
+    --fg-color: #ddd;
+    --bg-color-hover: #449;
+    --bg-color-active: #aae;
+    --bg-color-stress: #494;
+}
+
+@media only screen and (max-width:767px) {
+    * {
+        --bg-color-hover: #ddd;
+        --bg-color-active: #eaa;
+    }
+
+    [data-theme="dark"] * {
+        --bg-color-hover: #222;
+        --bg-color-active: #449;
+    }
+}
+
+.section {
+    width: 640px;
+    margin: 10px auto;
+    padding: 20px;
+    border: 2px var(--fg-color) solid;
+    border-radius: 16px;
+    overflow: hidden;
+}
+
+.section * {
+    display: flex;
+    justify-content: space-around;
+    color: var(--fg-color);
+    font-size: 16pt;
+}
+
+.caption {
+    display: flex;
+    align-items: baseline;
+    justify-content: center;
+    font-size: 30pt;
+    font-weight: bold;
+    margin: 10px 0;
+}
+
+.section_caption {
+    font-weight: bold;
+    font-size: 22pt;
+    margin-bottom: 10px;
+}
+
+.bold {
+    font-weight: bold;
+}
+
+.author,
+.author * {
+    color: #888;
+    text-decoration: none;
+}
+
+/* About checkbox */
+
+.checkbox_container {
+    position: relative;
+    width: 120px;
+    height: 36px;
+    line-height: 36px;
+    border: 1px var(--fg-color) solid;
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+.checkbox_container input[type=checkbox] {
+    position: absolute;
+    opacity: 0;
+}
+
+.checkbox_container .checkbox_text {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background-color: transparent;
+    width: 120px;
+}
+
+.checkbox_container input[type=checkbox]~.checkbox_label {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 120px;
+    height: 36px;
+    transition: 0.3s;
+    cursor: pointer;
+}
+
+.checkbox_container input[type=checkbox]:hover~.checkbox_label {
+    background-color: var(--bg-color-hover);
+}
+
+.checkbox_container input[type=checkbox]:checked~.checkbox_label {
+    background-color: var(--bg-color-stress);
+}
+
+.checkbox_container input[type=checkbox]:active~.checkbox_label {
+    background-color: var(--bg-color-active);
+}
+
+/* About selector */
+select {
+    background-color: transparent;
+    border: 1px solid var(--fg-color);
+    border-radius: 10px;
+    width: 80px;
+    height: 36px;
+    text-align: center;
+    cursor: pointer;
+}
+
+option {
+    border-radius: 10px;
+    max-width: 100px;
+    max-height: 36px;
+}
+
+/* About Table */
+.table {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+
+.table .row {
+    flex-direction: row;
+    padding: 5px 0;
+}
+
+.table .row+.row {
+    border-top: #888 2px solid;
+}
+
+.cell {
+    width: 120px;
+}
+
+/*About Input*/
+input[type=text] {
+    appearance: none;
+    height: 34px;
+    border: var(--fg-color) solid 1px;
+    border-radius: 10px;
+    overflow: hidden;
+    background-color: transparent;
+    transition: 0.3s;
+    text-align: center;
+}
+
+.button {
+    background-color: transparent;
+    border: 1px solid var(--fg-color);
+    border-radius: 10px;
+    width: 80px;
+    height: 34px;
+    line-height: 34px;
+    text-align: center;
+    transition: 0.3s;
+    cursor: pointer;
+    overflow: hidden;
+}
+
+.button:hover {
+    background-color: var(--bg-color-hover);
+}
+
+.button:active {
+    background-color: var(--bg-color-active);
+}
+
+.num_input {
+    width: 50px;
+}
+
+.err_message {
+    color: red;
+    width: 200px;
+    font-size: 12pt;
+    text-overflow: ellipsis;
+}
+
+.inline_button {
+    display: inline;
+    cursor: pointer;
+}
+
+/* About Texts */
+.text_section p {
+    text-indent: 2em;
+    -webkit-user-select: text;
+    user-select: text;
+    width: 100%;
+    text-align: left;
+    justify-content: flex-start;
+    flex-direction: column;
+    margin-bottom: 10px;
+}
+
+.text_section p * {
+    display: inline;
+    text-decoration: none;
+}
+
+.text_section {
+    display: flex;
+    justify-content: flex-start;
+    flex-direction: column;
+}
+
+.text_section .inline {
+    display: inline;
+}
+
+.seperator {
+    border-top: #888 2px solid;
+}

@@ -454,24 +454,5 @@ ele_button_feat3.addEventListener('click', (eve) => {
     }
 })
 
-// 暗黑模式
-const ele_body = document.querySelector('body');
-const ele_dark_switch = DD('dark_switch');
-ele_dark_switch.addEventListener('click', () => {
-    let old = ele_body.getAttribute('data-theme');
-    if (old === 'dark') {
-        ele_body.setAttribute('data-theme', 'light');
-        ele_dark_switch.innerHTML = '☀️';
-    } else {
-        ele_body.setAttribute('data-theme', 'dark');
-        ele_dark_switch.innerHTML = '🌙';
-    }
-})
-
-if (window.matchMedia("(prefers-color-scheme: dark)")) {
-    ele_body.setAttribute('data-theme', 'dark');
-    ele_dark_switch.innerHTML = '🌙';
-}
-
 // 初始化
 new CourseFeat3(); new CourseFeat3();
