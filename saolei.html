@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <title>半自动扫雷</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="minesweeper.css">
+    <link rel="shortcut icon" href="/favicon.ico" type="image/x-icon">
+</head>
+
+<body>
+    <div class="author">
+        <span class="device_type"></span>
+        本游戏由<a href="https://github.com/Joat917">Joat917</a>独立完成
+        <span class="dark_switch"></span>
+    </div>
+    <div class="caption">
+        扫雷！
+    </div>
+
+    <div class="section setting_buttons">
+        <div class="row">
+            <div class="button" id="reset">重置</div>
+            <div>
+                行数：
+                <input type="text" class="num_input" id="rowSetting" value="10">
+            </div>
+            <div>
+                列数：
+                <input type="text" class="num_input" id="colSetting" value="10">
+            </div>
+            <div>
+                雷数：
+                <input type="text" class="num_input" id="mineSetting" value="10">
+            </div>
+        </div>
+        <br>
+        <div class="row">
+            <div class="button" id="template_easy">简单</div>
+            <div class="button" id="template_moderate">中等</div>
+            <div class="button" id="template_difficult" style="width: 120px;">困难(竖)</div>
+            <div class="button" id="template_difficult_2" style="width: 120px;">困难(横)</div>
+        </div>
+    </div>
+
+    <div class="section indicator_section">
+        <div class="row">
+            <div class="text">时间</div>
+            <div id="timer" class="indicator"></div>
+            <div class="text">剩雷</div>
+            <div id="minesLeft" class="indicator"></div>
+            <div class="text">状态</div>
+            <div id="status" class="indicator"></div>
+        </div>
+    </div>
+
+    <div class="board" id="board"></div>
+
+    <div class="section">
+        <div class="row">
+            <div class="checkbox_container">
+                <input type="checkbox" id="possView">
+                <label for="possView" class="checkbox_label">概率视图</label>
+            </div>
+            <div class="button" id="help">帮助</div>
+            <div class="err_message" style="width: 400px;" id="err_help"></div>
+        </div>
+    </div>
+
+    <div class="section text_section">
+        <div class="section_caption">玩法说明</div>
+        <p>1. 对电脑端💻，左键挖雷，右键标记，双击翻开周围。和Windows扫雷一致。</p>
+        <p>2. 对手机端📱，按格子标记，按空地翻开周围。如果需要挖雷，请按住至少1.5秒。</p>
+        <p>3. 输赢状态请查看“状态”指示。 </p>
+        <p>4. 按‘R’或重置按钮重置。难度更改仅在重置时生效。</p>
+        <p>5. 按‘H’或帮助按钮以自动推进游戏进程。进入欢乐二选一状态时，帮助按钮能解决你的难题。但它并不一直有效。</p>
+        <p>6. 按‘P’进入概率视图。此处你可以看到各个格子有雷的概率（百分数），以大幅降低你在困境中蒙错的可能性。但在某些特殊情况下，这个概率可能不可靠。</p>
+    </div>
+
+    <script src="common.js"></script>
+    <script src="mswPre.js"></script>
+    <script src="saolei.js"></script>
+</body>
+
+</html>

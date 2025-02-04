@@ -25,7 +25,8 @@ It is the also most suitable place for a code file to settle and develop and mak
 Only HTML files and their corresponding css and js files. 
 
 - `./GlowingCornerHoverEffect.htm` When you put your mouse on the shapes, there are amazing lights shed on it. (PC only)
-- `./MswHtm.htm` A naive minesweeper game. 
+- `./minesweeper.html` An advanced minesweeper game. 
+- `./saolei.html` The same minesweeper game, in Chinese. 
 - `./sdk6.htm` Soduku game that enables the simplest cheating. 
 - `./switch.htm` A dragging switch with fancy effects. A little boring, but boring people like me love it. (PC only)
 - `./guess4.html` A game to guess a 4-digit integer with only a few feedbacks. 

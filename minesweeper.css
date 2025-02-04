@@ -1,0 +1,90 @@
+* {
+    --bg-color-2: #eaa;
+}
+
+[data-theme="dark"] * {
+    --bg-color-2: #449;
+}
+
+.board {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    margin: 10px auto;
+    padding: 20px;
+    border: 2px var(--fg-color) solid;
+    border-radius: 16px;
+    overflow: hidden;
+}
+
+.board .row {
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+}
+
+.board .cell {
+    width: 30px;
+    height: 30px;
+    text-align: center;
+    line-height: 30px;
+    font-size: 20px;
+    border-radius: 2px;
+    border: var(--fg-color) 2px solid;
+    background-color: var(--bg-color-2);
+}
+
+.board .cell.revealed {
+    background-color: var(--bg-color);
+}
+
+.board .cell.flagged {
+    background-color: aquamarine;
+    position: relative;
+}
+
+body[data-theme=dark] .board .cell.flagged {
+    background-color: darkgreen;
+}
+
+.cell.flagged::after {
+    content: '';
+    position: absolute;
+    top: 5px;
+    left: 9px;
+    width: 16px;
+    height: 10px;
+    background-color: red;
+    clip-path: polygon(0% 0%, 100% 50%, 0% 100%);
+}
+
+.cell.flagged::before {
+    content: '';
+    position: absolute;
+    bottom: 5px;
+    left: 5px;
+    width: 4px;
+    height: 20px;
+    background-color: var(--fg-color);
+}
+
+.board .cell.mine {
+    background-color: #f00;
+}
+
+.board .cell.flagged.mine {
+    background-color: goldenrod;
+}
+
+.indicator_section .text {
+    width: 150px;
+}
+
+.indicator {
+    display: flex;
+    width: 100px;
+    height: 30px;
+    border: 2px var(--fg-color) solid;
+    border-radius: 10px;
+    cursor: not-allowed;
+}

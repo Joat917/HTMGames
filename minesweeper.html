@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Minesweeper</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="minesweeper.css">
+    <link rel="shortcut icon" href="/favicon.ico" type="image/x-icon">
+</head>
+
+<body>
+    <div class="author">
+        <span class="device_type"></span>
+        Contributed by <a href="https://github.com/Joat917">Joat917</a>
+        <span class="dark_switch"></span>
+    </div>
+    <div class="caption">
+        Minesweeper
+    </div>
+
+    <div class="section setting_buttons">
+        <div class="row">
+            <div class="button" id="reset">Reset</div>
+            <div>
+                Rows: &nbsp;
+                <input type="text" class="num_input" id="rowSetting" value="10">
+            </div>
+            <div>
+                Cols: &nbsp;
+                <input type="text" class="num_input" id="colSetting" value="10">
+            </div>
+            <div>
+                Mines: &nbsp;
+                <input type="text" class="num_input" id="mineSetting" value="10">
+            </div>
+        </div>
+        <br>
+        <div class="row">
+            <div class="button" id="template_easy">Easy</div>
+            <div class="button" id="template_moderate" style="width: 120px;">Medium</div>
+            <div class="button" id="template_difficult" style="width: 120px;">Hard(V)</div>
+            <div class="button" id="template_difficult_2" style="width: 120px;">Hard(H)</div>
+        </div>
+    </div>
+
+    <div class="section indicator_section">
+        <div>
+            <div class="text">Time Used</div>
+            <div class="text">Mines Left</div>
+            <div class="text">Gaming Status</div>
+        </div>
+        <div>
+            <div id="timer" class="indicator"></div>
+            <div id="minesLeft" class="indicator"></div>
+            <div id="status" class="indicator"></div>
+        </div>
+    </div>
+
+    <div class="board" id="board"></div>
+
+    <div class="section">
+        <div class="row">
+            <div class="checkbox_container">
+                <input type="checkbox" id="possView">
+                <label for="possView" class="checkbox_label">Probability</label>
+            </div>
+            <div class="button" id="help">Help</div>
+            <div class="err_message" style="width: 400px;" id="err_help"></div>
+        </div>
+    </div>
+
+    <div class="section text_section">
+        <div class="section_caption">Instructions</div>
+        <p>1. For PC💻 users, left click to dig a cell, and right click to flag. Double click to dig up around the cell, just the same as you play the minesweeper game in Windows. </p>
+        <p>2. For Mobile📱 users, touch a cell to flag, and touch an empty space to dig up around. If you want to dig one specific cell, hold on the cell for at least 1.5 seconds. </p>
+        <p>3. Whether you win or lose is indicated via the "Gaming Status" indicator. </p>
+        <p>4. Press 'R' or the Reset button to reset. Press the difficulty buttons, or customize your own minefield via the inputs. Changes take effect once you reset. </p>
+        <p>5. Press 'H' or the Help button to automatically progress your game. It can sometimes tell you the answer if you are in dilemma. However, this method is not always in function. </p>
+        <p>6. Press 'P' or the Probability button to enter probability view mode. Here you can see the probabilities each cell is mined in percentage. This can help you make the ideal guesses if necessary. </p>
+    </div>
+
+    <script src="common.js"></script>
+    <script src="mswPre.js"></script>
+    <script src="minesweeper.js"></script>
+</body>
+
+</html>
