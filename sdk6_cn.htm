@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>半自动数独</title>
+    <style>
+        * {
+            padding: 0;
+            margin: 0;
+            color: #ccc;
+            background-color: #333;
+            user-select: none;
+        }
+
+        .container {
+            display: flex;
+            justify-content: center;
+        }
+
+        .map {
+            width: 346px;
+            height: 346px;
+            display: -webkit-flex;
+            display: flex;
+            flex-wrap: wrap;
+            border-radius: 10px;
+        }
+
+        .nodeGroup {
+            display: inline-flex;
+            flex-wrap: wrap;
+            justify-content: space-around;
+            /* background-color: #333; */
+            width: 108px;
+            height: 108px;
+            border-style: solid;
+            border-radius: 15px;
+            border-width: 2px;
+            border-color: #ddd;
+            overflow: hidden;
+        }
+
+        .node {
+            display: inline-flex;
+            flex-wrap: wrap;
+            justify-content: space-around;
+            /* background-color: #333; */
+            width: 32px;
+            height: 32px;
+            font-size: 24px;
+            text-align: center;
+            border-style: solid;
+            border-radius: 10px;
+            border-width: 2px;
+            border-color: #ddd;
+        }
+
+        .nodeText {
+            width: 32px;
+            display: inline-block;
+            text-align: center;
+            background-color: transparent;
+        }
+
+        .nodeStressed1 {
+            background-color: #248;
+        }
+
+        .nodeStressed2 {
+            background-color: #842;
+        }
+
+        .nodeSelected {
+            background-color: #482;
+        }
+
+        .nodeStressed3 {
+            background-color: #882;
+        }
+
+        .subNode {
+            display: inline-flex;
+            justify-content: center;
+            width: 10px;
+            height: 10px;
+            font-size: 8px;
+            background-color: transparent;
+            /* opacity: 0; */
+        }
+
+        .subNode1 {
+            left: 1px;
+            top: 1px;
+        }
+
+        .subNode2 {
+            left: 11px;
+            top: 1px;
+        }
+
+        .subNode3 {
+            left: 21px;
+            top: 1px;
+        }
+
+        .subNode4 {
+            left: 1px;
+            top: 11px;
+        }
+
+        .subNode5 {
+            left: 11px;
+            top: 11px;
+        }
+
+        .subNode6 {
+            left: 21px;
+            top: 11px;
+        }
+
+        .subNode7 {
+            left: 1px;
+            top: 21px;
+        }
+
+        .subNode8 {
+            left: 11px;
+            top: 21px;
+        }
+
+        .subNode9 {
+            left: 21px;
+            top: 21px;
+        }
+
+        .nodeSeperator1 {
+            display: inline-flex;
+            width: 5px;
+            height: 112px;
+            background-color: transparent;
+        }
+
+        .nodeSeperator2 {
+            display: inline-flex;
+            width: 346px;
+            height: 5px;
+            background-color: transparent;
+        }
+
+        .button {
+            display: inline-flex;
+            border: solid #ddd 2px;
+            border-radius: 10px;
+            padding: 6px;
+            margin: 6px;
+        }
+
+        .keyboard {
+            width: 300px;
+            height: 150px;
+            display: -webkit-flex;
+            display: flex;
+            flex-wrap: wrap;
+            border-radius: 10px;
+            margin-top: 20px;
+            margin-bottom: 20px;
+        }
+
+        .keybutton {
+            display: inline-flex;
+            flex-wrap: wrap;
+            justify-content: space-around;
+            width: 40px;
+            height: 40px;
+            font-size: 24px;
+            line-height: 40px;
+            text-align: center;
+            border-style: solid;
+            border-radius: 10px;
+            border-width: 2px;
+            border-color: #ddd;
+            margin: 3px;
+        }
+
+        .triangleUp{
+            width: 0;
+            height: 0;
+            background-color: transparent;
+            border-bottom: 28px solid #ddd;
+            border-left: 14px solid transparent;
+            border-right: 14px solid transparent;
+        }
+
+        .triangleDown{
+            width: 0;
+            height: 0;
+            background-color: transparent;
+            border-top: 28px solid #ddd;
+            border-left: 14px solid transparent;
+            border-right: 14px solid transparent;
+        }
+
+        .triangleLeft{
+            width: 0;
+            height: 0;
+            background-color: transparent;
+            border-right: 28px solid #ddd;
+            border-top: 14px solid transparent;
+            border-bottom: 14px solid transparent;
+        }
+
+        .triangleRight{
+            width: 0;
+            height: 0;
+            background-color: transparent;
+            border-left: 28px solid #ddd;
+            border-top: 14px solid transparent;
+            border-bottom: 14px solid transparent;
+        }
+
+        button:hover {
+            background-color: #444;
+        }
+
+        button:active {
+            background-color: #888;
+        }
+
+        button:disabled {
+            background-color: #aaa;
+        }
+    </style>
+    <link rel="shortcut icon" href="/favicon.ico" type="image/x-icon">
+</head>
+
+<body>
+    <div>请允许Javascript运行，否则游戏无法进行。</div>
+    <script src="sdk6_cn.js"></script>
+</body>
+
+</html>

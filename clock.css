@@ -1,0 +1,96 @@
+* {
+    --bg-color: #ddd;
+    --fg-color: #222;
+}
+
+body {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background-color: var(--bg-color);
+    height: 100vh;
+    margin: 0;
+    padding: 0;
+}
+
+.clock {
+    position: relative;
+    width: 300px;
+    height: 300px;
+    border: 8px solid black;
+    border-radius: 50%;
+    background: var(--bg-color);
+}
+
+.hand {
+    position: absolute;
+    width: 0;
+    height: 0;
+    bottom: 50%;
+    left: 50%;
+    transform-origin: bottom;
+    transition: transform 0.9s ease-in-out;
+}
+
+.hour {
+    border-left: 8px solid transparent;
+    border-right: 8px solid transparent;
+    border-bottom: 60px solid var(--fg-color);
+    margin-left: -8px;
+}
+
+.minute {
+    border-left: 6px solid transparent;
+    border-right: 6px solid transparent;
+    border-bottom: 120px solid var(--fg-color);
+    margin-left: -6px;
+}
+
+.second {
+    border-left: 3px solid transparent;
+    border-right: 3px solid transparent;
+    border-bottom: 140px solid var(--fg-color);
+    margin-left: -3px;
+}
+
+.center {
+    position: absolute;
+    width: 16px; 
+    height: 16px;
+    background-color: var(--fg-color);
+    border-radius: 50%; 
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%); 
+}
+
+.number {
+    position: absolute;
+    width: 40px;
+    height: 40px;
+    text-align: center;
+    font-family: 'Times New Roman', Times, serif;
+    font-size: 40px;
+    line-height: 40px; 
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) rotate(calc(30deg * var(--i))) translate(0, -120px) rotate(calc(-30deg * var(--i)));
+}
+
+.flipX {
+    transform: scaleX(-1);
+}
+
+.flipY  {
+    transform: scaleY(-1);
+}
+
+.flipD {
+    transform-origin: center;
+    transform: rotate(-45deg) scaleX(-1) rotate(45deg);
+}
+
+.rotate180 {
+    transform-origin: center;
+    transform: rotate(180deg);
+}

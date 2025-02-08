@@ -855,7 +855,7 @@ class SodukuDetailedSolver extends SodukuSolver {
             let t = pls[0][0];
             let v = pls[0][1][0];
             this.set(t, v);
-            this.hint_soleNumber(`这里(${t[0] + 1}列${t[1] + 1}行)只能填${v}。`, t);
+            this.hint_soleNumber(`Only ${v} is allowed here (row#${t[1]+1}, col#${t[0] + 1})`, t);
             yield;
             this.display();
             this.poss.set(t, undefined);
@@ -875,7 +875,7 @@ class SodukuDetailedSolver extends SodukuSolver {
                     for (let t of l) {
                         if (this.poss.get(t) && arrayInclude(this.poss.get(t), i)) {
                             this.set(t, i);
-                            this.hint_solePlace(`这里(${t[0] + 1}列${t[1] + 1}行)必须填${i}。`, t, l);
+                            this.hint_solePlace(`Here (row#${t[1] + 1}, col#${t[0] + 1}) is the only place for ${i}。`, t, l);
                             yield;
                             this.display();
                             this.poss.set(t, undefined);
@@ -903,8 +903,8 @@ class SodukuDetailedSolver extends SodukuSolver {
         }
         let [p, l] = pls[0];
         this.set(p, this.answer.data.get(p));
-        this.hint_general(`(${p[0] + 1}列${p[1] + 1}行)可以填入[${l.join('/')}]。
-            经过尝试，发现这里只能填${this.answer.data.get(p)}。`, p);
+        this.hint_general(`[${l.join('/')}] are allowed for (row#${p[1] + 1}, col#${p[0] + 1}), 
+            but only ${this.answer.data.get(p)} is allowed after trying all these opts. `, p);
         yield;
         this.display();
         return;
@@ -1232,12 +1232,12 @@ class SodukuHint extends SodukuSolver {
                     }
                 }
                 grid.get(pls[0][0]).classList.add('nodeStressed2');
-                promptDisplayer.innerText = '这里任何数字都放不进去。'
+                promptDisplayer.innerText = 'Nothing could be put in here'
                 throw new NoSolution();
             }
             let t = pls[0][0];
             let v = pls[0][1][0];
-            this.hint_soleNumber(`(${t[0] + 1}列${t[1] + 1}行)只能填${v}。`, t);
+            this.hint_soleNumber(`Here (row#${t[1] + 1}, col#${t[0] + 1}) is the only place for ${i}。`, t);
             return true;
         }
 
@@ -1253,7 +1253,7 @@ class SodukuHint extends SodukuSolver {
                 if (o.filter((item) => (item == i)).length == 1) {
                     for (let t of l) {
                         if (this.poss.get(t) && arrayInclude(this.poss.get(t), i)) {
-                            this.hint_solePlace(`这里(${t[0] + 1}列${t[1] + 1}行)必须填${i}。`, t, l);
+                            this.hint_solePlace(`Here (row#${t[1] + 1}, col#${t[0] + 1}) is the only place for ${i}。`, t, l);
                             return true;
                         }
                     }
@@ -1284,7 +1284,7 @@ class SodukuHint extends SodukuSolver {
 
         }
 
-        this.hint_general(`(${p[0] + 1}列${p[1] + 1}行)可以填入[${l.join('/')}]。尝试一下~`, p);
+        this.hint_general(`[${l.join('/')}] are allowed here (row#${p[1] + 1}, col#${p[0] + 1}). Give it a try! `, p);
         display(this.source);
         return;
     }
@@ -1304,7 +1304,7 @@ class SodukuHint extends SodukuSolver {
                         }
                         for (let p of l) {
                             grid.get(p).classList.add('nodeStressed2');
-                            promptDisplayer.innerText = '这里出现了问题。'
+                            promptDisplayer.innerText = 'Something wrong here.'
                         }
                         return true;
                     } else {
