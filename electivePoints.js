@@ -1,6 +1,10 @@
 const getMeanPoint = (per, mode = "classic") => {
     if (mode == "trivial") { return 37; }
     else if (mode == "competitive") { return 73; }
+    else if (mode == "adaptative"){
+        const result=calc([100, 100, 100], [Math.round(100*per), 150, 150], [1,1,1], 99, 0., ['trivial', 'trivial', 'trivial']);
+        return result.x[0];
+    }
     else {
         const qer = (per - 1) ** 0.125 + 1;
         const mean_0 = -101 * qer ** 2 + 392.6 * qer - 347.8;
@@ -38,8 +42,11 @@ const calc = (num0, num1, hapy, m = 99, delta = 0., mode = []) => {
     for (let i = 0; i < l; i++) { Per[i] = num1[i] / num0[i]; mean[i] = getMeanPoint(Per[i], mode[i]) }
 
     const loopInnerFunc = (ind1, ind2) => {
-        const old_expectation = hapy[ind1] * getExpectedPoss(num0[ind1], num1[ind1], (X[ind1] + delta) / (mean[ind1] + delta)) + hapy[ind2] * getExpectedPoss(num0[ind2], num1[ind2], (X[ind2] + delta) / (mean[ind2] + delta));
-        const new_expectation = hapy[ind1] * getExpectedPoss(num0[ind1], num1[ind1], (X[ind1] - 1 + delta) / (mean[ind1] + delta)) + hapy[ind2] * getExpectedPoss(num0[ind2], num1[ind2], (X[ind2] + 1 + delta) / (mean[ind2] + delta));
+        if(X[ind1]<=0){return false;}
+        const old_expectation = getExpectedPoss(num0[ind1], num1[ind1], (X[ind1] + delta) / (mean[ind1] + delta)) ** hapy[ind1] 
+                              * getExpectedPoss(num0[ind2], num1[ind2], (X[ind2] + delta) / (mean[ind2] + delta)) ** hapy[ind2];
+        const new_expectation = getExpectedPoss(num0[ind1], num1[ind1], (X[ind1] - 1 + delta) / (mean[ind1] + delta)) ** hapy[ind1] 
+                              * getExpectedPoss(num0[ind2], num1[ind2], (X[ind2] + 1 + delta) / (mean[ind2] + delta)) ** hapy[ind2];
         if (old_expectation < new_expectation) {
             X[ind1] -= 1; X[ind2] += 1; return true;
         }
@@ -300,9 +307,9 @@ class CourseFeat3 {
         const ele_cell3 = document.createElement('div');
         ele_cell3.classList.add('cell');
         this.ele_mode = document.createElement('select');
-        const _opt_texts = ["经典", "平凡", "激烈"];
-        const _opt_vals = ["classic", "trivial", "competitive"];
-        for (let i = 0; i < 3; i++) {
+        const _opt_texts = ["适应", "平凡", "激烈", "延继"];
+        const _opt_vals = ["adaptative", "trivial", "competitive", "classic"];
+        for (let i = 0; i < 4; i++) {
             const _ele_opt = document.createElement('option');
             _ele_opt.value = _opt_vals[i];
             _ele_opt.innerHTML = _opt_texts[i];
@@ -346,6 +353,7 @@ class CourseFeat3 {
             }
             feat3_courses.pop();
             self.ele_row.remove();
+            ele_err_feat3.innerHTML = '';
         })
         this.delete_button.innerHTML = '减课';
         this.delete_button.style.color = 'red';
@@ -392,6 +400,7 @@ class CourseFeat3 {
 
 ele_add_feat3.addEventListener('click', (eve) => {
     new CourseFeat3();
+    ele_err_feat3.innerHTML = '';
 })
 
 ele_button_feat3.addEventListener('click', (eve) => {
@@ -406,6 +415,10 @@ ele_button_feat3.addEventListener('click', (eve) => {
     const m = +ele_totalx_feat3.value;
     if (!(0 < m && m <= 99)) {
         ele_err_feat3.innerHTML = "总点数必须在1到99之间";
+        return;
+    }
+    if(feat3_courses.length===0){
+        ele_err_feat3.innerHTML = '必须存在至少一门课程';
         return;
     }
     for (let a of feat3_courses) {
