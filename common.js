@@ -41,3 +41,29 @@ document.addEventListener('keydown', (e) => {
     if(e.key.toUpperCase()=='F12'){e.preventDefault();}
 })
 document.addEventListener('contextmenu', (e) => (e.preventDefault()))
+
+setTimeout(()=>{
+    const today=new Date();
+    if(today.getMonth()===3 && today.getDate()===1){
+        let able_to_connect_to_google=false;
+        setTimeout(()=>{
+            fetch('https://www.google.com/', {method:'HEAD'}).then((res)=>{
+                able_to_connect_to_google=res.ok;
+            }).catch(()=>{
+                able_to_connect_to_google=false;
+            });
+        })
+        for(const aele of document.querySelectorAll('a')){
+            aele.target='_self';
+            aele.onclick=()=>false;
+            aele.addEventListener('click', (e)=>{
+                if(able_to_connect_to_google){
+                    window.open('https://www.youtube.com/watch?v=dQw4w9WgXcQ', '_blank');
+                }else{
+                    window.open('https://www.bilibili.com/video/BV1uT4y1P7CX/', '_blank'); 
+                }
+            });
+        }
+    }
+}, 100);
+
