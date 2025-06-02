@@ -28,6 +28,7 @@ These pages can be sorted into several catagories:
 - Numeric
   - `homo.html`: A tool to express all numbers using a finite set of numeric symbols, say, memetically `114514` or `1919810`, or usefully `123456`. *(zh Only)*
   - `./integers.html` To analyze integers. Break the integer into the product of the prime factors and iterate all the factors of the given integer. Also generate random positive integer from 1 to N. *(zh Only)*
+  - `ising.html` The Ising model with variant lattices. 
 - Games
   - `./sdk6.htm` Soduku game that enables the simplest cheating. 
   - `./sdk6_cn.htm` 一個杰哥主題的數獨電動，好康的 

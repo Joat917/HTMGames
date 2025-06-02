@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ising model demo</title>
+    <style>
+        * {
+            background-color: silver;
+            margin: 10px auto;
+            max-width: 760px;
+            font-size: 20px;
+        }
+
+        h1 {
+            text-align: center;
+        }
+
+        p {
+            text-align: left;
+        }
+
+        input,
+        select {
+            border: 2px black solid;
+            border-radius: 10px;
+            background-color: #ddd;
+            transition: background-color 0.3s;
+        }
+
+        input[type=button]:hover {
+            background-color: #ada;
+        }
+
+        input[readonly] {
+            border: none;
+            user-select: none;
+            background-color: silver;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Ising model</h1>
+    <p class="description">
+        The Ising model is a mathematical model used in statistical physics to study ferromagnetic materials such as
+        iron.
+        It consists of a large lattice of sites, where the site can be in either one of two states: 1(spin-up) or
+        -1(spin-down).
+    </p>
+    <p class="description">
+        Any particular spin on the lattice feels the influence of its adjacent spins.
+        Neighboring spins prefer to align with one another to minimize the energy of the system, but the temperature
+        prevents this tendency and excites everything up to chaos.
+        The boundary between order and chaos can be achieved when temperature is tuned to a critical value, but it's a
+        tough work to figure out the exact value of the critical temperature.
+    </p>
+    <p class="description">
+        In square, triangle, hexagon and hexrhom lattices, each spin shares 4,3,6 and mix(4,6) neighbors.
+        More neighbors, more stable, higher critical temperature.
+    </p>
+    <p class="hit-the-start-button">
+        *Please press the <a href="javascript:startStop()">start</a> button*
+    </p>
+    <div class="container">
+        <canvas id="painter" width="720" height="720"></canvas>
+    </div>
+    <div class="container">
+        "Size:"
+        <input type="text" id="sizeInputer" size="5" value="120" onchange="changeSize()">
+        <select id="gridtype" onchange="changeGridType()">
+            <option value="0">Square(4)</option>
+            <option value="1">Triangle(3)</option>
+            <option value="2">Hexagon(6)</option>
+            <option value="3">Hexrhom(4/6)</option>
+        </select>
+        <br>
+        "Temperature:"
+        <input type="text" id="tempReadout" readonly size="1" value="2.27">
+        <input type="range" id="tempSlider" min="0.01" max="7" step="0.01" value="2.27" onchange="changeTemp()"
+            style="width: 360px; ">
+        <input type="button" value="start" id="startButton" onclick="startStop()">
+    </div>
+    <div class="container">
+        "Steps per frame:"
+        <input type="text" id="spfReadout" readonly size="4" value="10000">
+        <input type="range" id="spfSlider" min="0" max="42" step="1" value="28" onchange="changeSPF()"
+            style="width: 360px; ">
+        <br>
+        "Frame Rate:"
+        <input type="text" id="fpsReadout" readonly size="3" value="30">
+        "Steps per second:"
+        <input type="text" id="spsReadout" readonly size="5" value="300,000">
+    </div>
+    <script>
+        const canvas = document.getElementById('painter');
+        const ctx = canvas.getContext('2d');
+        const sizeInputer = document.getElementById('sizeInputer');
+        const tempReadout = document.getElementById('tempReadout');
+        const tempSlider = document.getElementById('tempSlider');
+        const spfReadout = document.getElementById('spfReadout');
+        const fpsReadout = document.getElementById('fpsReadout');
+        const spsReadout = document.getElementById('spsReadout');
+
+        const maxSize = 720;
+        const available_sizes = [3, 4, 5, 6, 8, 9, 10, 12, 15, 16, 18, 20, 24, 30, 36, 40, 45, 48, 60, 72, 80, 90, 120, 144, 180, 240, 360, 720]
+        let gridtype = 0;
+        let temperature = 2.27;
+        let stepsPerFrame = 10000;
+        let isRunning = false;
+        let size = 120;
+
+        let _frame_last_checked = 0;
+        let _time_last_checked = Date.now();
+        let _time_last_simulation = Date.now();
+        let _run_timeout = undefined;
+
+        class IsingModel {
+            constructor(nodeCount) {
+                this.nodeCount = nodeCount;
+                this.grid = this._createGrid();
+                this.neighbors = new Array(nodeCount);
+
+                this.old_grid = new Array(nodeCount);
+            }
+
+            _createGrid() {
+                const grid = [];
+                for (let i = 0; i < this.nodeCount; i++) {
+                    grid[i] = Math.random() < 0.5 ? 1 : -1;
+                }
+                return grid;
+            }
+
+            paint_image_unit(left, top, value, node_id) {
+                throw new Error("paint_image_unit must be implemented in subclasses");
+            }
+
+            get_topleft(node_id) {
+                const left = (node_id % this.size) * (maxSize / this.size);
+                const top = Math.floor(node_id / this.size) * (maxSize / this.size);
+                return [left, top];
+            }
+
+            update() {
+                // Update logic for the Ising model
+                const i = Math.floor(Math.random() * this.nodeCount);
+                const value = this.grid[i];
+                const neighbors = this.neighbors[i];
+                let energyChange = 0;
+
+                for (const neighbor of neighbors) {
+                    energyChange += 2 * this.grid[neighbor] * value;
+                }
+
+                if (Math.random() < Math.exp(-energyChange / temperature)) {
+                    this.grid[i] *= -1; // Flip the spin
+                }
+            }
+
+            draw() {
+                for (let i = 0; i < this.nodeCount; i++) {
+                    const value = this.grid[i];
+                    if (value !== this.old_grid[i]) {
+                        this.old_grid[i] = value;
+                        const [left, top] = this.get_topleft(i);
+                        this.paint_image_unit(left, top, value, i);
+                    }
+                }
+            }
+        }
+
+        class SquareGrid extends IsingModel {
+            constructor(size) {
+                super(size * size);
+                this.size = size;
+                this.initNeighbors();
+            }
+
+            initNeighbors() {
+                for (let i = 0; i < this.nodeCount; i++) {
+                    this.neighbors[i] = [];
+                    const left = i % this.size;
+                    const top = Math.floor(i / this.size);
+
+                    this.neighbors[i].push(top * this.size + (this.size + left - 1) % this.size); // Left
+                    this.neighbors[i].push(top * this.size + (left + 1) % this.size); // Right
+                    this.neighbors[i].push((this.nodeCount + i - this.size) % this.nodeCount); // Up
+                    this.neighbors[i].push((i + this.size) % this.nodeCount); // Down
+                }
+            }
+
+            paint_image_unit(left, top, value) {
+                ctx.fillStyle = value > 0 ? 'white' : 'black';
+                ctx.fillRect(left, top, maxSize / this.size, maxSize / this.size);
+            }
+        }
+
+        class TriangleGrid extends IsingModel {
+            constructor(size) {
+                super(size * size);
+                this.size = size;
+                this.initNeighbors();
+            }
+
+            initNeighbors() {
+                for (let i = 0; i < this.nodeCount; i++) {
+                    this.neighbors[i] = [];
+                    const row = Math.floor(i / this.size);
+                    const col = i % this.size;
+                    if ((row ^ col) & 1) {
+                        this.neighbors[i].push(((row - 1 + this.size) % this.size) * this.size + col); // Up
+                    } else {
+                        this.neighbors[i].push(((row + 1) % this.size) * this.size + col); // Down
+                    }
+                    this.neighbors[i].push(row * this.size + (col - 1 + this.size) % this.size); // Left
+                    this.neighbors[i].push(row * this.size + (col + 1) % this.size); // Right
+                }
+            }
+
+            paint_image_unit(left, top, value, i) {
+                ctx.fillStyle = value > 0 ? 'black' : 'white';
+                const row = Math.floor(i / this.size);
+                const col = i % this.size;
+                if ((row ^ col) & 1) {
+                    // upwards triangle
+                    ctx.beginPath();
+                    ctx.moveTo(left + maxSize / this.size, top);
+                    ctx.lineTo(left, top + maxSize / this.size);
+                    ctx.lineTo(left + 2 * maxSize / this.size, top + maxSize / this.size);
+                    ctx.closePath();
+                    ctx.fill();
+                } else {
+                    // downwards triangle
+                    ctx.beginPath();
+                    ctx.moveTo(left, top);
+                    ctx.lineTo(left + maxSize / this.size, top + maxSize / this.size);
+                    ctx.lineTo(left + 2 * maxSize / this.size, top);
+                    ctx.closePath();
+                    ctx.fill();
+                }
+            }
+        }
+
+        class HexagonGrid extends IsingModel {
+            constructor(size) {
+                super(size * size);
+                this.size = size;
+                this.initNeighbors();
+            }
+
+            initNeighbors() {
+                for (let i = 0; i < this.nodeCount; i++) {
+                    this.neighbors[i] = [];
+                    const row = Math.floor(i / this.size);
+                    const col = i % this.size;
+
+                    this.neighbors[i].push(((row - 1 + this.size) % this.size) * this.size + col); // Up
+                    this.neighbors[i].push(((row + 1) % this.size) * this.size + col); // Down
+                    this.neighbors[i].push(row * this.size + (col - 1 + this.size) % this.size); // Left
+                    this.neighbors[i].push(row * this.size + (col + 1) % this.size); // Right
+                    if (row & 1) {
+                        this.neighbors[i].push(((row - 1 + this.size) % this.size) * this.size + (col - 1 + this.size) % this.size); // Up-Left
+                        this.neighbors[i].push(((row + 1) % this.size) * this.size + (col - 1 + this.size) % this.size); // Down-Left
+                    } else {
+                        this.neighbors[i].push(((row - 1 + this.size) % this.size) * this.size + (col + 1) % this.size); // Up-Right
+                        this.neighbors[i].push(((row + 1) % this.size) * this.size + (col + 1) % this.size); // Down-Right
+                    }
+                }
+            }
+
+            get_topleft(node_id) {
+                const row = Math.floor(node_id / this.size);
+                let left, top;
+                if (row & 1) {
+                    left = (node_id % this.size + 0.5) * (maxSize / this.size);
+                    top = Math.floor(node_id / this.size) * (maxSize / this.size);
+                } else {
+                    left = (node_id % this.size) * (maxSize / this.size);
+                    top = Math.floor(node_id / this.size) * (maxSize / this.size);
+                }
+                return [left, top];
+            }
+
+            paint_image_unit(left, top, value, i) {
+                ctx.fillStyle = value > 0 ? 'black' : 'white';
+                ctx.beginPath();
+                ctx.moveTo(left, top - maxSize / (6 * this.size));
+                ctx.lineTo(left + maxSize / (2 * this.size), top + maxSize / (6 * this.size));
+                ctx.lineTo(left + maxSize / (2 * this.size), top + maxSize * 5 / (6 * this.size));
+                ctx.lineTo(left, top + maxSize * 7 / (6 * this.size));
+                ctx.lineTo(left - maxSize / (2 * this.size), top + maxSize * 5 / (6 * this.size));
+                ctx.lineTo(left - maxSize / (2 * this.size), top + maxSize / (6 * this.size));
+                ctx.closePath();
+                ctx.fill();
+            }
+        }
+
+        class HexrhomGrid extends IsingModel {
+            constructor(size) {
+                super(2 * size * size);
+                this.size = size;
+                this.initNeighbors();
+            }
+
+            initNeighbors() {
+                for (let i = 0; i < this.nodeCount; i++) {
+                    this.neighbors[i] = [];
+                    const col = i % this.size;
+                    const row = Math.floor(i / this.size);
+
+                    if (row & 1) {
+                        this.neighbors[i].push((row - 1 + this.size) % this.size * this.size + col); // Up
+                        this.neighbors[i].push((row + 1) % this.size * this.size + col); // Down
+                        this.neighbors[i].push((row - 1 + this.size) % this.size * this.size + (col + 1) % this.size); // Up-Right
+                        this.neighbors[i].push((row + 1) % this.size * this.size + (col + 1) % this.size); // Down-Right
+                    } else {
+                        this.neighbors[i].push((row - 2 + this.size) % this.size * this.size + col); // Up-Left
+                        this.neighbors[i].push((row + 2) % this.size * this.size + col); // Down-Left
+                        this.neighbors[i].push((row - 1 + this.size) % this.size * this.size + col); // Up
+                        this.neighbors[i].push((row + 1) % this.size * this.size + col); // Down
+                        this.neighbors[i].push((row - 1 + this.size) % this.size * this.size + (col - 1 + this.size) % this.size); // Up-Left
+                        this.neighbors[i].push((row + 1) % this.size * this.size + (col - 1 + this.size) % this.size); // Down-Left
+                    }
+                }
+            }
+
+            get_topleft(node_id) {
+                const row = Math.floor(node_id / this.size);
+                let left, top;
+                if (row & 1) {
+                    left = (node_id % this.size + 0.5) * (maxSize / this.size);
+                    top = Math.floor(node_id / this.size) * (maxSize / this.size / 2);
+                } else {
+                    left = (node_id % this.size) * (maxSize / this.size);
+                    top = Math.floor(node_id / this.size) * (maxSize / this.size / 2);
+                }
+                return [left, top];
+            }
+
+            paint_image_unit(left, top, value, i) {
+                ctx.fillStyle = value > 0 ? 'black' : 'white';
+                const row = Math.floor(i / this.size);
+                const u = maxSize / this.size
+                if (row & 1) {
+                    ctx.beginPath();
+                    ctx.moveTo(left - u / 4, top);
+                    ctx.lineTo(left + u / 4, top);
+                    ctx.lineTo(left + u / 2, top + u / 2);
+                    ctx.lineTo(left + u / 4, top + u);
+                    ctx.lineTo(left - u / 4, top + u);
+                    ctx.lineTo(left - u / 2, top + u / 2);
+                    ctx.closePath();
+                } else {
+                    ctx.beginPath();
+                    ctx.moveTo(left - u / 4, top + u / 2);
+                    ctx.lineTo(left, top);
+                    ctx.lineTo(left + u / 4, top + u / 2);
+                    ctx.lineTo(left, top + u);
+                    ctx.closePath();
+                }
+                ctx.fill();
+            }
+        }
+
+        let grid = new SquareGrid(size);
+        grid.draw();
+
+        function getGrid() {
+            switch (gridtype) {
+                case 0:
+                    return new SquareGrid(size);
+                case 1:
+                    return new TriangleGrid(size);
+                case 2:
+                    return new HexagonGrid(size);
+                case 3:
+                    return new HexrhomGrid(size);
+                default:
+                    throw new Error("Unknown grid type");
+            }
+        }
+
+        function changeSize() {
+            let new_size = parseInt(sizeInputer.value);
+            if (isNaN(new_size) || new_size < 1 || new_size > maxSize) {
+                sizeInputer.value = size;
+                return;
+            }
+            // find the nearest number in available_sizes to be new size
+            // new_size = available_sizes.reduce((prev, curr) => Math.abs(curr - new_size) < Math.abs(prev - new_size) ? curr : prev);
+            size = new_size;
+            sizeInputer.value = size;
+            grid = getGrid();
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            grid.draw();
+        }
+
+        function changeGridType() {
+            gridtype = parseInt(document.getElementById('gridtype').value);
+            grid = getGrid();
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            grid.draw();
+        }
+
+        function changeTemp() {
+            const slider_value = parseFloat(tempSlider.value);
+            temperature = slider_value
+            tempReadout.value = temperature.toFixed(2);
+        }
+
+        function startStop() {
+            isRunning = !isRunning;
+            if (isRunning) {
+                document.getElementById('startButton').value = 'pause';
+                runSimulation();
+                for(const ele of document.querySelectorAll(".hit-the-start-button")){ele.remove()}
+            } else {
+                document.getElementById('startButton').value = 'resume';
+                clearTimeout(_run_timeout);
+            }
+        }
+
+        function changeSPF() {
+            let slider_value = parseInt(document.getElementById('spfSlider').value);
+            if (slider_value < 7) {
+                stepsPerFrame = slider_value;
+            } else {
+                switch (slider_value % 7) {
+                    case 0:
+                        stepsPerFrame = 1.2;
+                        break;
+                    case 1:
+                        stepsPerFrame = 1.5;
+                        break;
+                    case 2:
+                        stepsPerFrame = 2;
+                        break;
+                    case 3:
+                        stepsPerFrame = 2.5;
+                        break;
+                    case 4:
+                        stepsPerFrame = 3;
+                        break;
+                    case 5:
+                        stepsPerFrame = 5;
+                        break;
+                    case 6:
+                        stepsPerFrame = 7.5;
+                        break;
+                }
+                stepsPerFrame *= 10 ** Math.floor(slider_value / 7);
+            }
+            spfReadout.value = stepsPerFrame;
+        }
+
+        function largeIntegerDisplay(s) {
+            // put commas into a large integer string
+            return s.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+        }
+
+        function setFPS() {
+            const now = Date.now();
+            if (now - _time_last_checked < 150) return;
+            fpsReadout.value = (_frame_last_checked / ((now - _time_last_checked) / 1000)).toFixed(2);
+            spsReadout.value = largeIntegerDisplay((_frame_last_checked * stepsPerFrame / ((now - _time_last_checked) / 1000)).toFixed(0));
+            _frame_last_checked = 0;
+            _time_last_checked = now;
+        }
+
+        function runSimulation() {
+            if (!isRunning) return;
+            for (let i = 0; i < stepsPerFrame; i++) {
+                grid.update();
+            }
+            grid.draw();
+            _frame_last_checked++;
+            const now = Date.now();
+            clearTimeout(_run_timeout);
+            // _run_timeout=setTimeout(runSimulation, Math.max(0, 1000 / 30 - (now - _time_last_simulation)));
+            _run_timeout = setTimeout(runSimulation, 1);
+            _time_last_simulation = now;
+            setFPS();
+        }
+    </script>
+</body>
+
+</html>
