@@ -5,11 +5,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Ising model demo</title>
+    <link rel="stylesheet" href="style.css">
     <style>
         * {
-            background-color: silver;
             margin: 10px auto;
-            max-width: 760px;
             font-size: 20px;
         }
 
@@ -23,25 +22,66 @@
 
         input,
         select {
-            border: 2px black solid;
+            border: 1px var(--fg-color) solid;
             border-radius: 10px;
-            background-color: #ddd;
-            transition: background-color 0.3s;
+            background-color: var(--bg-color);
+        }
+
+        input[type=button] {
+            min-height: 30px;
         }
 
         input[type=button]:hover {
-            background-color: #ada;
+            background-color: var(--bg-color-hover);
         }
 
         input[readonly] {
             border: none;
             user-select: none;
-            background-color: silver;
+            background-color: var(--bg-color);
         }
     </style>
 </head>
 
 <body>
+    <h1>Ising model<span class="dark_switch"></span></h1>
+    <div class="container" style="display: grid; place-items: center;">
+        <p class="hit-the-start-button">
+        *Please press the <a href="javascript:startStop()">start</a> button*
+        </p>
+    </div>
+    
+    <div class="container" style="display: grid; place-items: center;">
+        <canvas id="painter" width="720" height="720"></canvas>
+    </div>
+    <div class="container">
+        Size:
+        <input type="text" id="sizeInputer" size="5" value="120" onchange="changeSize()">
+        <select id="gridtype" onchange="changeGridType()" style="min-width: 150px;">
+            <option value="0">Square(4)</option>
+            <option value="1">Triangle(3)</option>
+            <option value="2">Hexagon(6)</option>
+            <option value="3">Hexrhom(4/6)</option>
+        </select>
+        <br>
+        Temperature:
+        <input type="text" id="tempReadout" readonly size="1" value="2.27">
+        <input type="range" id="tempSlider" min="0.01" max="7" step="0.01" value="2.27" onchange="changeTemp()"
+            style="width: 320px; ">
+        <input type="button" value="start" id="startButton" onclick="startStop()" style="min-width: 80px;">
+    </div>
+    <div class="container">
+        Steps per frame:
+        <input type="text" id="spfReadout" readonly size="4" value="10000">
+        <input type="range" id="spfSlider" min="0" max="42" step="1" value="28" onchange="changeSPF()"
+            style="width: 320px; ">
+        <br>
+        Frame Rate:
+        <input type="text" id="fpsReadout" readonly size="3" value="30">
+        <br>
+        Steps per second:
+        <input type="text" id="spsReadout" readonly size="5" value="300,000">
+    </div>
     <h1>Ising model</h1>
     <p class="description">
         The Ising model is a mathematical model used in statistical physics to study ferromagnetic materials such as
@@ -60,39 +100,7 @@
         In square, triangle, hexagon and hexrhom lattices, each spin shares 4,3,6 and mix(4,6) neighbors.
         More neighbors, more stable, higher critical temperature.
     </p>
-    <p class="hit-the-start-button">
-        *Please press the <a href="javascript:startStop()">start</a> button*
-    </p>
-    <div class="container">
-        <canvas id="painter" width="720" height="720"></canvas>
-    </div>
-    <div class="container">
-        "Size:"
-        <input type="text" id="sizeInputer" size="5" value="120" onchange="changeSize()">
-        <select id="gridtype" onchange="changeGridType()">
-            <option value="0">Square(4)</option>
-            <option value="1">Triangle(3)</option>
-            <option value="2">Hexagon(6)</option>
-            <option value="3">Hexrhom(4/6)</option>
-        </select>
-        <br>
-        "Temperature:"
-        <input type="text" id="tempReadout" readonly size="1" value="2.27">
-        <input type="range" id="tempSlider" min="0.01" max="7" step="0.01" value="2.27" onchange="changeTemp()"
-            style="width: 360px; ">
-        <input type="button" value="start" id="startButton" onclick="startStop()">
-    </div>
-    <div class="container">
-        "Steps per frame:"
-        <input type="text" id="spfReadout" readonly size="4" value="10000">
-        <input type="range" id="spfSlider" min="0" max="42" step="1" value="28" onchange="changeSPF()"
-            style="width: 360px; ">
-        <br>
-        "Frame Rate:"
-        <input type="text" id="fpsReadout" readonly size="3" value="30">
-        "Steps per second:"
-        <input type="text" id="spsReadout" readonly size="5" value="300,000">
-    </div>
+    <script src="common.js"></script>
     <script>
         const canvas = document.getElementById('painter');
         const ctx = canvas.getContext('2d');
@@ -103,13 +111,22 @@
         const fpsReadout = document.getElementById('fpsReadout');
         const spsReadout = document.getElementById('spsReadout');
 
-        const maxSize = 720;
+        let maxSize = 720;
+        let size = 120;
+        // if window width is less than 720, use the smaller one
+        if (window.visualViewport.width*window.visualViewport.scale < maxSize) {
+            maxSize=360;
+            canvas.width = 360;
+            canvas.height = 360;
+            size=60;
+            sizeInputer.value=60;
+        } 
         const available_sizes = [3, 4, 5, 6, 8, 9, 10, 12, 15, 16, 18, 20, 24, 30, 36, 40, 45, 48, 60, 72, 80, 90, 120, 144, 180, 240, 360, 720]
         let gridtype = 0;
         let temperature = 2.27;
         let stepsPerFrame = 10000;
         let isRunning = false;
-        let size = 120;
+        
 
         let _frame_last_checked = 0;
         let _time_last_checked = Date.now();
