@@ -25,6 +25,7 @@
             border: 1px var(--fg-color) solid;
             border-radius: 10px;
             background-color: var(--bg-color);
+            overflow: visible;
         }
 
         input[type=button] {
@@ -35,7 +36,8 @@
             background-color: var(--bg-color-hover);
         }
 
-        input[readonly] {
+        .indicator {
+            display: inline-block;
             border: none;
             user-select: none;
             background-color: var(--bg-color);
@@ -45,18 +47,18 @@
 
 <body>
     <h1>Ising model<span class="dark_switch"></span></h1>
-    <div class="container" style="display: grid; place-items: center;">
+    <div class="container">
         <p class="hit-the-start-button">
         *Please press the <a href="javascript:startStop()">start</a> button*
         </p>
     </div>
     
-    <div class="container" style="display: grid; place-items: center;">
-        <canvas id="painter" width="720" height="720"></canvas>
+    <div class="container">
+        <canvas id="painter" width="720" height="720" style="width:720px;height: 720px;margin: 10px auto;"></canvas>
     </div>
     <div class="container">
         Size:
-        <input type="text" id="sizeInputer" size="5" value="120" onchange="changeSize()">
+        <input type="text" id="sizeInputer" value="120" onchange="changeSize()" style="width: 70px;">
         <select id="gridtype" onchange="changeGridType()" style="min-width: 150px;">
             <option value="0">Square(4)</option>
             <option value="1">Triangle(3)</option>
@@ -64,23 +66,30 @@
             <option value="3">Hexrhom(4/6)</option>
         </select>
         <br>
-        Temperature:
-        <input type="text" id="tempReadout" readonly size="1" value="2.27">
-        <input type="range" id="tempSlider" min="0.01" max="7" step="0.01" value="2.27" onchange="changeTemp()"
-            style="width: 320px; ">
         <input type="button" value="start" id="startButton" onclick="startStop()" style="min-width: 80px;">
     </div>
     <div class="container">
+        Temperature:
+        <div class="indicator" id="tempReadout" style="width: 80px;">2.27</div>
+        <input type="range" id="tempSlider" min="0.01" max="7" step="0.01" value="2.27" onchange="changeTemp()"
+            style="min-width: 320px; ">
         Steps per frame:
-        <input type="text" id="spfReadout" readonly size="4" value="10000">
+        <div class="indicator" id="spfReadout" style="width: 100px;">10000</div>
         <input type="range" id="spfSlider" min="0" max="42" step="1" value="28" onchange="changeSPF()"
-            style="width: 320px; ">
+            style="min-width: 320px; ">
         <br>
+        Target Frame Rate: 
+        <div class="indicator" id="fpsSettingReadout" style="width: 100px;">30</div>
+        <input type="range" id="fpsSettingSlider" min="10" max="46" step="1" value="30" onchange="changeFPS()"
+            style="min-width: 320px; ">
+    </div>
+    <div class="container">
         Frame Rate:
-        <input type="text" id="fpsReadout" readonly size="3" value="30">
+        <div class="indicator" id="fpsReadout" style="width: 80px;">30</div>
         <br>
         Steps per second:
-        <input type="text" id="spsReadout" readonly size="5" value="300,000">
+        <div class="indicator" id="spsReadout" style="width: 120px;">300,000</div>
+    </div>
     </div>
     <h1>Ising model</h1>
     <p class="description">
@@ -107,9 +116,13 @@
         const sizeInputer = document.getElementById('sizeInputer');
         const tempReadout = document.getElementById('tempReadout');
         const tempSlider = document.getElementById('tempSlider');
+        const spfSlider=document.getElementById('spfSlider');
         const spfReadout = document.getElementById('spfReadout');
         const fpsReadout = document.getElementById('fpsReadout');
         const spsReadout = document.getElementById('spsReadout');
+        const fpsSettingReadout = document.getElementById('fpsSettingReadout');
+        const fpsSettingSlider = document.getElementById('fpsSettingSlider');
+        const startButton=document.getElementById('startButton');
 
         let maxSize = 720;
         let size = 120;
@@ -118,6 +131,8 @@
             maxSize=360;
             canvas.width = 360;
             canvas.height = 360;
+            canvas.style.width='360px';
+            canvas.style.height='360px';
             size=60;
             sizeInputer.value=60;
         } 
@@ -126,11 +141,10 @@
         let temperature = 2.27;
         let stepsPerFrame = 10000;
         let isRunning = false;
-        
+        let targetFrameRate=30;
 
         let _frame_last_checked = 0;
         let _time_last_checked = Date.now();
-        let _time_last_simulation = Date.now();
         let _run_timeout = undefined;
 
         class IsingModel {
@@ -424,23 +438,23 @@
         function changeTemp() {
             const slider_value = parseFloat(tempSlider.value);
             temperature = slider_value
-            tempReadout.value = temperature.toFixed(2);
+            tempReadout.innerHTML = temperature.toFixed(2);
         }
 
         function startStop() {
             isRunning = !isRunning;
             if (isRunning) {
-                document.getElementById('startButton').value = 'pause';
+                startButton.value = 'pause';
                 runSimulation();
                 for(const ele of document.querySelectorAll(".hit-the-start-button")){ele.remove()}
             } else {
-                document.getElementById('startButton').value = 'resume';
+                startButton.value = 'resume';
                 clearTimeout(_run_timeout);
             }
         }
 
         function changeSPF() {
-            let slider_value = parseInt(document.getElementById('spfSlider').value);
+            let slider_value = parseInt(spfSlider.value);
             if (slider_value < 7) {
                 stepsPerFrame = slider_value;
             } else {
@@ -469,7 +483,19 @@
                 }
                 stepsPerFrame *= 10 ** Math.floor(slider_value / 7);
             }
-            spfReadout.value = stepsPerFrame;
+            spfReadout.innerHTML = stepsPerFrame;
+        }
+
+        function changeFPS(){
+             let slider_value = parseInt(fpsSettingSlider.value);
+            if (slider_value <=30) {
+                targetFrameRate = slider_value;
+            } else if(slider_value<=45) {
+                targetFrameRate = (slider_value-30)*2+30;
+            }else{
+                targetFrameRate=Infinity;
+            }
+            fpsSettingReadout.innerHTML = targetFrameRate;
         }
 
         function largeIntegerDisplay(s) {
@@ -480,8 +506,8 @@
         function setFPS() {
             const now = Date.now();
             if (now - _time_last_checked < 150) return;
-            fpsReadout.value = (_frame_last_checked / ((now - _time_last_checked) / 1000)).toFixed(2);
-            spsReadout.value = largeIntegerDisplay((_frame_last_checked * stepsPerFrame / ((now - _time_last_checked) / 1000)).toFixed(0));
+            fpsReadout.innerHTML = (_frame_last_checked / ((now - _time_last_checked) / 1000)).toFixed(2);
+            spsReadout.innerHTML = largeIntegerDisplay((_frame_last_checked * stepsPerFrame / ((now - _time_last_checked) / 1000)).toFixed(0));
             _frame_last_checked = 0;
             _time_last_checked = now;
         }
@@ -493,11 +519,14 @@
             }
             grid.draw();
             _frame_last_checked++;
-            const now = Date.now();
+            let _time_next_simulation=_time_last_checked+_frame_last_checked*1000/targetFrameRate;
             clearTimeout(_run_timeout);
-            // _run_timeout=setTimeout(runSimulation, Math.max(0, 1000 / 30 - (now - _time_last_simulation)));
-            _run_timeout = setTimeout(runSimulation, 1);
-            _time_last_simulation = now;
+            const now = Date.now();
+            if(!isFinite(targetFrameRate)){
+                _run_timeout=setTimeout(runSimulation, 0);
+            }else{
+                _run_timeout=setTimeout(runSimulation, Math.max(0, _time_next_simulation-now));
+            }
             setFPS();
         }
     </script>
