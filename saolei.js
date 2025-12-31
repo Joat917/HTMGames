@@ -324,7 +324,15 @@ const _tryMinePlaces = () => {
         };
     }
     const possibilities = combination(unrevealedBlocksCount, minesLeft);
-    if (!isFinite(possibilities) || possibilities > 5000) {
+    if (!isFinite(possibilities)){
+        let lg_possibilities = log_combination(unrevealedBlocksCount, minesLeft)*Math.log10(Math.E);
+        let exponential_part = Math.floor(lg_possibilities);
+        return {
+            hints: [],
+            reason: `没法枚举全部${Math.pow(10, lg_possibilities-exponential_part)}e+${exponential_part}种可能性。试试概率视图？`
+        };
+    }
+    else if (possibilities > 5000) {
         return {
             hints: [],
             reason: `没法枚举全部${Math.round(possibilities)}种可能性。试试概率视图？`

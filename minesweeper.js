@@ -324,7 +324,15 @@ const _tryMinePlaces = () => {
         };
     }
     const possibilities = combination(unrevealedBlocksCount, minesLeft);
-    if (!isFinite(possibilities) || possibilities > 5000) {
+    if (!isFinite(possibilities)){
+        let lg_possibilities = log_combination(unrevealedBlocksCount, minesLeft)*Math.log10(Math.E);
+        let exponential_part = Math.floor(lg_possibilities);
+        return {
+            hints: [],
+            reason: `Cannot go through all ${Math.pow(10, lg_possibilities-exponential_part)}e+${exponential_part} possibilities;<br> Perhaps you should make a guess using the probability view. `
+        };
+    }
+    else if (possibilities > 5000) {
         return {
             hints: [],
             reason: `Cannot go through all ${Math.round(possibilities)} possibilities;<br> Perhaps you should make a guess using the probability view. `

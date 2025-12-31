@@ -93,7 +93,18 @@ function combination(n, k) {
     if (k > n || k < 0) {
         throw new Error("Invalid input: k must be between 0 and n");
     }
-    return factorial(n) / (factorial(k) * factorial(n - k));
+    let result = factorial(n) / (factorial(k) * factorial(n - k));
+    if (!isFinite(result)) {
+        return Math.exp(log_combination(n, k));
+    }
+    return result;
+}
+
+function log_combination(n, k){
+    if (k > n || k < 0) {
+        throw new Error("Invalid input: k must be between 0 and n");
+    }
+    return n* (Math.log(n) - 1) - k * (Math.log(k) - 1) - (n - k) * (Math.log(n - k) - 1) + 0.5 * (Math.log(n) - Math.log(k) - Math.log(n - k)) + 0.5 * Math.log(2 * Math.PI);
 }
 
 function generateCombinations(n, k) {
