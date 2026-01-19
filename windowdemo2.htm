@@ -11,8 +11,8 @@
             color: var(--ftg-clr-0);
             padding: 0;
             border: 0;
-            user-select: none;
             -webkit-user-select: none;
+            user-select: none;
         }
     </style>
 </head>
@@ -292,6 +292,62 @@
             return _node;
         }
 
+        class Slider {
+            static init() {
+                document.styleSheets[0].insertRule(".slider {display:inline-block;height:36px;border:var(--ftg-clr-0) solid 2px;box-shadow:none;border-radius:20px;transition-duration:0.3s;overflow:hidden;}");
+                document.styleSheets[0].insertRule(".slider::before {content:' ';display:inline-block;position:relative;width:28px;height:28px;left:var(--before-left);top:2px;background-color:#fff;border-radius:16px;transition-duration:0.3s;transform:none;border:solid var(--ftg-clr-0) 2px;opacity:0.5}");
+                document.styleSheets[0].insertRule(".slider_enabled:hover {box-shadow:inset 0px 0px 5px var(--ftg-clr-1);}");
+                document.styleSheets[0].insertRule(".slider_enabled:active::before {transform:scale(1.15);opacity:1}");
+            }
+
+            constructor(parent, width, ev_func, hooks) {
+                this.ele = document.createElement("div");
+                this.ele.classList.add("slider");
+                this.ele.classList.add("slider_enabled");
+                parent.appendChild(this.ele);
+
+                this.width = width;
+                this.ele.style.width = (this.width + 38) + 'px';
+                this.x = 0;
+                this.ele.style.setProperty("--before-left", (this.x + 4) + "px");
+
+                if (ev_func !== undefined) this.ev_func = ev_func; else { this.ev_func = (x) => x }
+                this.enabled = true;
+                if (hooks !== undefined) this.hooks = new Array(hooks); else { this.hooks = [] }
+
+                let self = this;
+                function mmFunc(ev) {
+                    self.x = ev.x - self.ele.getClientRects()[0].x - 18;
+                    if (self.x < 0) { self.x = 0; } else if (self.x > self.width) { self.x = self.width; }
+                    if (isFinite(self.x)) {
+                        for (let h of self.hooks) h(self.get_v());
+                        self.ele.style.setProperty("--before-left", (self.x + 4) + "px");
+                    }
+                }
+
+                this.ele.addEventListener("mousedown", (e) => { mmFunc(e); document.addEventListener("mousemove", mmFunc) });
+                document.addEventListener("mouseup", () => { document.removeEventListener("mousemove", mmFunc) });
+            }
+
+            enable() {
+                this.enabled = true;
+                this.ele.classList.add("slider_enabled");
+            }
+
+            disable() {
+                this.enabled = false;
+                this.ele.classList.remove("slider_enabled");
+            }
+
+            get_x() {
+                return this.x / this.width;
+            }
+
+            get_v() {
+                return this.ev_func(this.x / this.width);
+            }
+        }
+
         const CookieManager = {
             getItem: (skey) => {
                 return (
@@ -394,8 +450,27 @@
             }
         }
 
+        sliderCollection2 = () => {
+            let root = new Widget([], [], 420);
+            let hooks = [
+                (x) => x,
+                (x) => Math.log2(x),
+                (x) => { if (x < 0.05) { return 0 } else if (x < 0.45) { return 1.25 * (x - 0.05) } else if (x < 0.55) { return 0.5 } else if (x < 0.95) { return 1.25 * (x - 0.55) + 0.5 } else { return 1 } },
+                (x) => Math.sin(Math.PI * x),
+                (x) => Math.random(),
+            ]
+            for (let _i = 0; _i < 5; _i++) {
+                let slider = new Slider(root.container, 300, hooks[_i]);
+                let displayer = createInlineNode("-.---", 40);
+                slider.hooks.push((x) => { displayer.innerHTML = x.toFixed(3); })
+                slider.ele.style.float = 'left';
+                root.container.appendChild(displayer);
+            }
+        }
+
         Switch.init();
         Widget.init();
+        Slider.init();
 
         setTimeout(() => {
             contextMenuer([
@@ -417,14 +492,18 @@
 
             swwg.container.appendChild(createInlineNode('SwitchGame: ', 34));
             let sw2 = new Switch(swwg.container, false);
-            sw2.activate_hook.push(()=>{switchGame1(8);setTimeout(()=>{sw2.checkbox.checked=false},2000)});
+            sw2.activate_hook.push(() => { switchGame1(8); setTimeout(() => { sw2.checkbox.checked = false }, 2000) });
+            swwg.container.appendChild(document.createElement('br'));
+
+            swwg.container.appendChild(createInlineNode('SliderCollct: ', 34));
+            let sw3 = new Switch(swwg.container, false);
+            sw3.activate_hook.push(() => { sliderCollection2(); setTimeout(() => { sw3.checkbox.checked = false }, 2000) });
+            swwg.container.appendChild(document.createElement('br'));
         }, 0)
 
-        // setTimeout(() => {
-        //     let wg = new Widget([createDivNode(
-        //         `We use essential cookies to make our site work. With your consent, we may also use non-essential cookies to improve user experience and analyze website traffic. By clicking “Accept”, you agree to our website's cookie use as described in our Cookie Policy. You can change your cookie settings at any time by clicking “Preferences”.`
-        //     )], [createDivNode('Accept'), createDivNode('Preferences')], 300);
-        // }, 0);
+        setTimeout(() => {
+
+        }, 0)
 
     </script>
 </body>
