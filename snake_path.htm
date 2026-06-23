@@ -53,27 +53,30 @@
             background: none;
         }
 
-
         canvas {
             display: block;
             border-radius: 16px;
             background: #1a1a2e;
             box-shadow: inset 0 0 0 1px #2e2e52, 0 8px 24px rgba(0, 0, 0, 0.6);
             cursor: pointer;
-            width: 600px;
-            height: 600px;
+            width: var(--canvas-size, 600px);
+            height: var(--canvas-size, 600px);
+            -webkit-tap-highlight-color: transparent;
+            -moz-tap-highlight-color: transparent;
         }
         .panel {
             width: 100%;
             margin-top: 18px;
             display: flex;
             flex-wrap: wrap;
+            flex-direction: column;
             justify-content: space-between;
             align-items: center;
             gap: 12px 20px;
             color: #c8c8e8;
             font-size: 15px;
             font-weight: 450;
+            max-width: var(--canvas-size, 780px);
         }
         .status-bar {
             display: flex;
@@ -83,8 +86,7 @@
             background: #1f1f3a;
             padding: 6px 18px 6px 18px;
             border-radius: 40px;
-            width: 420px;
-            height: 40px;
+            /* height: 40px; */
         }
         .status-badge {
             display: inline-block;
@@ -172,27 +174,6 @@
             color: #6a6a8a;
             margin-left: 4px;
         }
-        @media (max-width: 720px) {
-            .container {
-                padding: 14px;
-            }
-            canvas {
-                width: 100%;
-                height: auto;
-                aspect-ratio: 1/1;
-            }
-            .panel {
-                flex-direction: column;
-                align-items: stretch;
-                gap: 10px;
-            }
-            .status-bar {
-                justify-content: center;
-            }
-            .controls {
-                justify-content: center;
-            }
-        }
     </style>
 </head>
 <body>
@@ -211,6 +192,7 @@
                     <span id="infoSnake">🐍 3</span>
                     <span id="infoPath">🛤 0</span>
                     <span id="infoTarget">🎯 -</span>
+                    <span id="infoSteps">👞 0</span>
                 </div>
             </div>
             <div class="controls">
@@ -228,21 +210,16 @@
     </div>
 
     <script>
-        const canvas = document.getElementById('gameCanvas');
-        const ctx = canvas.getContext('2d');
-        const statusBadge = document.getElementById('statusBadge');
-        const infoSnake = document.getElementById('infoSnake');
-        const infoPath = document.getElementById('infoPath');
-        const infoTarget = document.getElementById('infoTarget');
-        const speedSlider = document.getElementById('speedSlider');
-        const speedLabel = document.getElementById('speedLabel');
-        const restartBtn = document.getElementById('restartBtn');
-
         // ---------- 常量 ----------
-        const GRID = 20;
-        const CELL = 30;
+        const GRID = 10;
+        const CANVAS_SIZE = Math.min(window.visualViewport.width-28, 600);
+        const CELL = CANVAS_SIZE / GRID;
         const HALF = CELL / 2;
+        const HALF_GRID = Math.floor(GRID / 2);
+        const HALF_CANVAS = CANVAS_SIZE / 2;
 
+        // 设备检测（移动端保留原逻辑，桌面端启用鼠标悬停规划）
+        const IS_MOBILE = ('ontouchstart' in window) || (navigator.maxTouchPoints && navigator.maxTouchPoints > 0);
         // 方向常量
         const DIR = {
             UP: 0,
@@ -253,808 +230,614 @@
         const DX = [0, 1, 0, -1];
         const DY = [-1, 0, 1, 0];
 
-        // ---------- 游戏状态 ----------
-        let snake = [];
-        let food = { x: 8, y: 12 };
-        let state = 'IDLE'; // IDLE | PLANNED | EXECUTING | GAME_OVER
-        let target = null; // {x, y} 或 null
-        let currentPath = [];
-        let isReachable = false;
-        let stepTimer = null;
-        let isExecuting = false;
-        let stepInterval = 35;
-        let skipRequested = false;
-
-        // 存储上次点击的目标，用于判断是否同一格
-        let lastClickedTarget = null;
-
-        // ---------- 初始化 ----------
-        function initGame() {
-            snake = [
-                { x: 10, y: 10 },
-                { x: 9, y: 10 },
-                { x: 8, y: 10 },
-                { x: 7, y: 10 },
-            ];
-            generateFood();
-            state = 'IDLE';
-            target = null;
-            currentPath = [];
-            isReachable = false;
-            skipRequested = false;
-            lastClickedTarget = null;
-            if (stepTimer) {
-                clearInterval(stepTimer);
-                stepTimer = null;
-            }
-            isExecuting = false;
-            updateUI();
-            draw();
-        }
-
-        // ---------- 食物 ----------
-        function generateFood() {
-            const total = GRID * GRID;
-            if (snake.length >= total) {
-                food = { x: -1, y: -1 };
-                return;
-            }
-            const snakeSet = new Set(snake.map(p => `${p.x},${p.y}`));
-            const free = [];
-            for (let i = 0; i < GRID; i++) {
-                for (let j = 0; j < GRID; j++) {
-                    if (!snakeSet.has(`${i},${j}`)) free.push({ x: i, y: j });
+        const Renderer = {
+            canvas: document.getElementById('gameCanvas'),
+            ctx: null,
+            statusBadge: document.getElementById('statusBadge'),
+            infoSnake: document.getElementById('infoSnake'),
+            infoPath: document.getElementById('infoPath'),
+            infoTarget: document.getElementById('infoTarget'),
+            infoSteps: document.getElementById('infoSteps'),
+            speedSlider: document.getElementById('speedSlider'),
+            speedLabel: document.getElementById('speedLabel'),
+            restartBtn: document.getElementById('restartBtn'),
+            init() {
+                this.canvas.width = CANVAS_SIZE;
+                this.canvas.height = CANVAS_SIZE;
+                this.canvas.style.setProperty('--canvas-size', CANVAS_SIZE + 'px');
+                this.ctx = this.canvas.getContext('2d');
+                this.bindEvents();
+            },
+            bindEvents() {
+                this.canvas.addEventListener('click', (e) => Game.handleCanvasClick(e));
+                this.restartBtn.addEventListener('click', () => Game.restartGame());
+                this.canvas.addEventListener('touchstart', (e) => {
+                    Game.touchOverwrite++;
+                    const touch = e.touches[0];
+                    Game.handleCanvasClick(touch);
+                    setTimeout(() => { Game.touchOverwrite--; }, 1000);
+                });
+                // 桌面端：鼠标移动即规划路径
+                if (!IS_MOBILE) {
+                    this.canvas.addEventListener('mousemove', (e) => Game.handleCanvasHover(e));
                 }
-            }
-            if (free.length === 0) {
-                food = { x: -1, y: -1 };
-                return;
-            }
-            const idx = Math.floor(Math.random() * free.length);
-            food = free[idx];
-        }
-
-        // ---------- 获取蛇头方向 ----------
-        function getHeadDirection() {
-            if (snake.length < 2) return DIR.RIGHT;
-            const head = snake[0];
-            const next = snake[1];
-            const dx = head.x - next.x;
-            const dy = head.y - next.y;
-            if (dx === 1 && dy === 0) return DIR.RIGHT;
-            if (dx === -1 && dy === 0) return DIR.LEFT;
-            if (dx === 0 && dy === 1) return DIR.DOWN;
-            if (dx === 0 && dy === -1) return DIR.UP;
-            return DIR.RIGHT;
-        }
-
-        // ---------- 距离场 (只考虑墙壁) ----------
-        function computeDistMap() {
-            const dist = Array.from({ length: GRID }, () => Array(GRID).fill(Infinity));
-            const head = snake[0];
-            dist[head.x][head.y] = 0;
-            const queue = [{ x: head.x, y: head.y }];
-            while (queue.length > 0) {
-                const cur = queue.shift();
-                const d = dist[cur.x][cur.y];
-                for (let i = 0; i < 4; i++) {
-                    const nx = cur.x + DX[i],
-                        ny = cur.y + DY[i];
-                    if (nx < 0 || nx >= GRID || ny < 0 || ny >= GRID) continue;
-                    if (dist[nx][ny] > d + 1) {
-                        dist[nx][ny] = d + 1;
-                        queue.push({ x: nx, y: ny });
-                    }
+                document.addEventListener('keydown', (e) => {
+                    if (e.key === 'r' || e.key === 'R') Game.restartGame();
+                });
+                this.speedSlider.addEventListener('input', () => Game.onSpeedChange());
+                Game.onSpeedChange();
+            },
+            updateUI() {
+                const statusMap = {
+                    'IDLE': '⏸ 空闲',
+                    'PLANNED': '🗺 已规划',
+                    'EXECUTING': '▶ 执行中',
+                    'GAME_OVER': '💀 你死了'
+                };
+                const clsMap = {
+                    'IDLE': 'idle',
+                    'PLANNED': 'planned',
+                    'EXECUTING': 'executing',
+                    'GAME_OVER': 'gameover'
+                };
+                let state = Game.state.toUpperCase();
+                if (!statusMap[state]) state = 'IDLE';
+                if(Game.state==='GAME_OVER' && Game.isVictory()){
+                    this.statusBadge.textContent = '🎉 你赢了';
+                    this.statusBadge.className = 'status-badge executing'; // 同款绿色背景
+                }else{
+                    this.statusBadge.textContent = statusMap[state];
+                    this.statusBadge.className = 'status-badge '+ clsMap[state];
                 }
-            }
-            return dist;
-        }
-
-        // ---------- 动态障碍判定 ----------
-        function isCellWalkable(x, y, distMap, targetPos, isFoodTarget) {
-            if (x < 0 || x >= GRID || y < 0 || y >= GRID) return false;
-
-            if (food.x >= 0 && food.y >= 0) {
-                if (x === food.x && y === food.y) {
-                    if (!isFoodTarget) return false;
-                }
-            }
-
-            const idx = snake.findIndex(p => p.x === x && p.y === y);
-            if (idx === -1) return true;
-            if (idx === 0) return true;
-            const d = distMap[x][y];
-            if (d === Infinity) return false;
-            return d >= snake.length - idx;
-        }
-
-        // ---------- BFS 
-        function bfsDynamic(start, goal, distMap, isFoodTarget) {
-            if (start.x === goal.x && start.y === goal.y) return [];
-
-            const visited = Array.from({ length: GRID }, () => Array(GRID).fill(false));
-            const parent = Array.from({ length: GRID }, () => Array(GRID).fill(null));
-            // parentDir 记录从父节点到当前节点的方向
-            const parentDir = Array.from({ length: GRID }, () => Array(GRID).fill(-1));
-
-            const queue = [{ x: start.x, y: start.y }];
-            visited[start.x][start.y] = true;
-
-            let nearestNode = { x: start.x, y: start.y };
-            let nearestDist = Infinity;
-
-            // 获取蛇头方向，用于优先级排序
-            const headDir = getHeadDirection();
-
-            while (queue.length > 0) {
-                const cur = queue.shift();
-                if (cur.x === goal.x && cur.y === goal.y) break;
-                const curDist = Math.abs(cur.x - goal.x) + Math.abs(cur.y - goal.y);
-                if (curDist < nearestDist && !(cur.x === start.x && cur.y === start.y)) {
-                    nearestDist = curDist;
-                    nearestNode = { x: cur.x, y: cur.y };
-                }
-
-                // 获取进入当前节点的方向 (如果是起点，用蛇头方向)
-                let entryDir = parentDir[cur.x][cur.y];
-                if (entryDir === -1) {
-                    entryDir = headDir;
-                }
-
-                // 构建优先级顺序: 直行 > 左转 > 右转 > 掉头(但不应该出现)
-                // 四个方向的优先级分数: 直行3, 左转2, 右转1, 掉头0(排除)
-                const candidates = [];
-                for (let d = 0; d < 4; d++) {
-                    const nx = cur.x + DX[d],
-                        ny = cur.y + DY[d];
-                    if (nx < 0 || nx >= GRID || ny < 0 || ny >= GRID) continue;
-                    if (visited[nx][ny]) continue;
-                    if (!isCellWalkable(nx, ny, distMap, goal, isFoodTarget)) continue;
-                    let score = 0;
-                    if (d === entryDir) {
-                        score = 3;
-                    } else {
-                        if (d === (entryDir + 3) % 4) {
-                            score = 2;
-                        }
-                        else if (d === (entryDir + 1) % 4) {
-                            score = 1;
-                        }
-                        else {
-                            score = 0;
-                        }
-                    }
-                    candidates.push({ x: nx, y: ny, dir: d, score: score });
-                }
-                candidates.sort((a, b) => b.score - a.score);
-
-                for (const c of candidates) {
-                    if (!visited[c.x][c.y]) {
-                        visited[c.x][c.y] = true;
-                        parent[c.x][c.y] = { x: cur.x, y: cur.y };
-                        parentDir[c.x][c.y] = c.dir;
-                        queue.push({ x: c.x, y: c.y });
-                    }
-                }
-            }
-
-            const path = [];
-            let cur = { x: goal.x, y: goal.y };
-            if (!visited[goal.x][goal.y]){
-                // 找到最接近目标的可达点开始回溯
-                cur = nearestNode;
-            }
-            while (cur.x !== start.x || cur.y !== start.y) {
-                path.unshift({ x: cur.x, y: cur.y });
-                const p = parent[cur.x][cur.y];
-                if (!p) break;
-                cur = p;
-            }
-            console.log(path)
-            return path;
-        }
-
-        // ---------- 规划路径 ----------
-        function planPath(targetPos) {
-            const head = snake[0];
-            const distMap = computeDistMap();
-            const isFoodTarget = (food.x === targetPos.x && food.y === targetPos.y);
-
-            let path = bfsDynamic(head, targetPos, distMap, isFoodTarget);;
-            let reachable = path[path.length - 1]?.x === targetPos.x && path[path.length - 1]?.y === targetPos.y;
-            let nearest = path.length > 0 ? path[path.length - 1] : head;
-            if (targetPos.x === head.x && targetPos.y === head.y) {
-                reachable = false; // 原地tp不算可达，因为不能移动
-                nearest = head;
-            }
-
-            return {
-                path: path,
-                reachable: reachable,
-                nearest: nearest,
-                target: targetPos,
-                isFoodTarget: isFoodTarget
-            };
-        }
-
-        function startExecution(plan) {
-            if (state === 'GAME_OVER') return;
-            if (!plan || !plan.reachable || plan.path.length === 0) {
-                if (snake[0].x === plan.target.x && snake[0].y === plan.target.y) {
-                    state = 'IDLE';
-                    lastClickedTarget = null;
-                    updateUI();
-                    draw();
-                    return;
-                }
-                state = 'IDLE';
-                lastClickedTarget = null;
-                updateUI();
-                draw();
-                return;
-            }
-
-            state = 'EXECUTING';
-            isExecuting = true;
-            skipRequested = false;
-            window._pendingTarget = null;
-            updateUI();
-            draw();
-
-            let path = plan.path.slice();
-            let stepIndex = 0;
-
-            if (stepTimer) {
-                clearInterval(stepTimer);
-                stepTimer = null;
-            }
-
-            const doStep = () => {
-                if (state === 'GAME_OVER') {
-                    clearInterval(stepTimer);
-                    stepTimer = null;
-                    isExecuting = false;
-                    return;
-                }
-
-                // 跳过请求
-                if (skipRequested) {
-                    skipRequested = false;
-                    
-                    // 获取剩余路径
-                    const remainingPath = path.slice(stepIndex);
-                    
-                    // 沿着剩余路径逐格移动（瞬间完成）
-                    for (let i = 0; i < remainingPath.length; i++) {
-                        const next = remainingPath[i];
-                        const newHead = { x: next.x, y: next.y };
-                        
-                        // 检查是否吃到食物
-                        let ate = false;
-                        if (food.x >= 0 && food.y >= 0) {
-                            if (newHead.x === food.x && newHead.y === food.y) {
-                                ate = true;
-                            }
-                        }
-                        
-                        snake.unshift(newHead);
-                        if (!ate) {
-                            snake.pop();
-                        } else {
-                            generateFood();
-                            if (food.x === -1 && food.y === -1) {
-                                state = 'GAME_OVER';
-                                // ...
-                                return;
-                            }
-                        }
-                        
-                        // 检查蛇头是否被包围
-                        if (isHeadTrapped()) {
-                            state = 'GAME_OVER';
-                            // ...
-                            return;
-                        }
-                    }
-                    
-                    // 到达目标
-                    state = 'IDLE';
-                    isExecuting = false;
-                    currentPath = [];
-                    target = null;
-                    isReachable = false;
-                    lastClickedTarget = null;
-                    clearInterval(stepTimer);
-                    stepTimer = null;
-                    updateUI();
-                    draw();
-                    return;
-                }
-
-                // 正常执行
-                if (stepIndex >= path.length) {
-                    state = 'IDLE';
-                    isExecuting = false;
-                    currentPath = [];
-                    target = null;
-                    isReachable = false;
-                    lastClickedTarget = null;
-                    clearInterval(stepTimer);
-                    stepTimer = null;
-                    updateUI();
-                    draw();
-                    if (window._pendingTarget) {
-                        const pt = window._pendingTarget;
-                        window._pendingTarget = null;
-                        const newPlan = planPath(pt);
-                        currentPath = newPlan.path;
-                        isReachable = newPlan.reachable;
-                        target = pt;
-                        lastClickedTarget = pt;
-                        if (newPlan.reachable) {
-                            state = 'PLANNED';
-                            updateUI();
-                            draw();
-                        } else {
-                            state = 'IDLE';
-                            updateUI();
-                            draw();
-                        }
-                    }
-                    return;
-                }
-
-                const next = path[stepIndex];
-                if (next.x < 0 || next.x >= GRID || next.y < 0 || next.y >= GRID) {
-                    state = 'IDLE';
-                    isExecuting = false;
-                    clearInterval(stepTimer);
-                    stepTimer = null;
-                    updateUI();
-                    draw();
-                    return;
-                }
-
-                const newHead = { x: next.x, y: next.y };
-                let ate = false;
-                if (food.x >= 0 && food.y >= 0) {
-                    if (newHead.x === food.x && newHead.y === food.y) {
-                        ate = true;
-                    }
-                }
-                snake.unshift(newHead);
-                if (!ate) {
-                    snake.pop();
-                } else {
-                    generateFood();
-                    if (food.x === -1 && food.y === -1) {
-                        state = 'GAME_OVER';
-                        isExecuting = false;
-                        clearInterval(stepTimer);
-                        stepTimer = null;
-                        updateUI();
-                        draw();
-                        return;
-                    }
-                    const remainingPath = path.slice(stepIndex + 1);
-                    console.assert(remainingPath.length === 0);
-                }
-
-                if (isHeadTrapped()) {
-                    state = 'GAME_OVER';
-                    isExecuting = false;
-                    clearInterval(stepTimer);
-                    stepTimer = null;
-                    updateUI();
-                    draw();
-                    return;
-                }
-
-                stepIndex++;
-                updateUI();
-                draw();
-
-                if (stepIndex >= path.length) {
-                    state = 'IDLE';
-                    isExecuting = false;
-                    currentPath = [];
-                    target = null;
-                    isReachable = false;
-                    lastClickedTarget = null;
-                    clearInterval(stepTimer);
-                    stepTimer = null;
-                    updateUI();
-                    draw();
-                    if (window._pendingTarget) {
-                        const pt = window._pendingTarget;
-                        window._pendingTarget = null;
-                        const newPlan = planPath(pt);
-                        currentPath = newPlan.path;
-                        isReachable = newPlan.reachable;
-                        target = pt;
-                        lastClickedTarget = pt;
-                        if (newPlan.reachable) {
-                            state = 'PLANNED';
-                            updateUI();
-                            draw();
-                        } else {
-                            state = 'IDLE';
-                            updateUI();
-                            draw();
-                        }
-                    }
-                }
-            };
-
-            stepTimer = setInterval(doStep, stepInterval);
-        }
-
-        // ---------- 检查蛇头是否被包围 ----------
-        function isHeadTrapped() {
-            const head = snake[0];
-            const snakeSet = new Set(snake.map((p, i) => {
-                if (i === snake.length - 1) return null;
-                return `${p.x},${p.y}`;
-            }));
-            snakeSet.delete(null);
-
-            for (let d = 0; d < 4; d++) {
-                const nx = head.x + DX[d],
-                    ny = head.y + DY[d];
-                if (nx < 0 || nx >= GRID || ny < 0 || ny >= GRID) continue;
-                if (!snakeSet.has(`${nx},${ny}`)) {
-                    return false;
-                }
-            }
-            return true;
-        }
-
-        // ---------- UI 更新 ----------
-        function updateUI() {
-            const statusMap = {
-                'IDLE': '⏸ 空闲',
-                'PLANNED': '🗺 已规划',
-                'EXECUTING': '▶ 执行中',
-                'GAME_OVER': '💀 游戏结束'
-            };
-            const clsMap = {
-                'IDLE': 'idle',
-                'PLANNED': 'planned',
-                'EXECUTING': 'executing',
-                'GAME_OVER': 'gameover'
-            };
-            statusBadge.textContent = statusMap[state] || '⏸ 空闲';
-            statusBadge.className = 'status-badge ' + (clsMap[state] || 'idle');
-
-            infoSnake.textContent = `🐍 ${snake.length}`;
-            infoPath.textContent = `🛤 ${currentPath.length}`;
-            if (target) {
-                infoTarget.textContent = `🎯 (${target.x},${target.y})`;
-            } else {
-                infoTarget.textContent = '🎯 -';
-            }
-        }
-
-        // ---------- 绘制 ----------
-        function draw() {
-            ctx.clearRect(0, 0, 600, 600);
-
-            // 网格
-            ctx.strokeStyle = '#2a2a4a';
-            ctx.lineWidth = 0.5;
-            for (let i = 0; i <= GRID; i++) {
-                ctx.beginPath();
-                ctx.moveTo(i * CELL, 0);
-                ctx.lineTo(i * CELL, 600);
-                ctx.stroke();
-                ctx.beginPath();
-                ctx.moveTo(0, i * CELL);
-                ctx.lineTo(600, i * CELL);
-                ctx.stroke();
-            }
-
-            // 路径
-            if (currentPath.length > 0 && state !== 'GAME_OVER') {
-                const isReach = isReachable;
-                const fillColor = isReach ? 'rgba(60, 160, 255, 0.25)' : 'rgba(255, 70, 70, 0.25)';
-                const strokeColor = isReach ? 'rgba(60, 160, 255, 0.6)' : 'rgba(255, 70, 70, 0.6)';
-
-                for (let i = 0; i < currentPath.length; i++) {
-                    const p = currentPath[i];
-                    const x = p.x * CELL,
-                        y = p.y * CELL;
-                    ctx.fillStyle = fillColor;
-                    ctx.fillRect(x + 1, y + 1, CELL - 2, CELL - 2);
-                    ctx.strokeStyle = strokeColor;
-                    ctx.lineWidth = 1.5;
-                    ctx.strokeRect(x + 1, y + 1, CELL - 2, CELL - 2);
-
-                    ctx.fillStyle = isReach ? '#8ac4ff' : '#ff8a7a';
-                    ctx.font = `bold ${CELL * 0.32}px "Segoe UI", system-ui, sans-serif`;
-                    ctx.textAlign = 'center';
-                    ctx.textBaseline = 'middle';
-                    ctx.fillText((i + 1).toString(), x + HALF, y + HALF + 1);
-                }
-
-                if (!isReachable && currentPath.length > 0) {
-                    const last = currentPath[currentPath.length - 1];
-                    const lx = last.x * CELL + HALF;
-                    const ly = last.y * CELL + HALF;
-                    ctx.font = `bold ${CELL * 0.5}px sans-serif`;
-                    ctx.textAlign = 'center';
-                    ctx.textBaseline = 'middle';
-                    ctx.fillStyle = 'rgba(255, 50, 50, 0.9)';
-                    ctx.fillText('❌', lx + CELL * 0.55, ly - CELL * 0.5);
-                }
-            }
-
-            // 食物
-            if (food.x >= 0 && food.y >= 0) {
-                const fx = food.x * CELL + HALF,
-                    fy = food.y * CELL + HALF;
-                const grad = ctx.createRadialGradient(fx - 3, fy - 3, 2, fx, fy, CELL * 0.45);
-                grad.addColorStop(0, '#ff6b6b');
-                grad.addColorStop(0.7, '#ee2222');
-                grad.addColorStop(1, '#991111');
-                ctx.beginPath();
-                ctx.arc(fx, fy, CELL * 0.4, 0, Math.PI * 2);
-                ctx.fillStyle = grad;
-                ctx.shadowColor = 'rgba(255, 60, 60, 0.5)';
-                ctx.shadowBlur = 12;
-                ctx.fill();
-                ctx.shadowBlur = 0;
-                ctx.beginPath();
-                ctx.arc(fx - 3, fy - 4, 4, 0, Math.PI * 2);
-                ctx.fillStyle = 'rgba(255,255,255,0.3)';
-                ctx.fill();
-            }
-
-            // 蛇身
-            if (snake.length > 0) {
-                const len = snake.length;
-                for (let i = 0; i < len; i++) {
-                    const p = snake[i];
-                    const x = p.x * CELL,
-                        y = p.y * CELL;
-                    const t = len > 1 ? i / (len - 1) : 0;
-                    const hue = 220 - t * 210;
-                    const lightness = 55 + t * 15;
-                    const color = `hsl(${hue}, 85%, ${lightness}%)`;
-                    const radius = CELL * 0.28;
-
-                    ctx.shadowColor = `hsla(${hue}, 80%, 50%, 0.3)`;
-                    ctx.shadowBlur = 6;
-
-                    const cx = x + HALF,
-                        cy = y + HALF;
-                    const r = radius;
-                    const w = CELL - 2,
-                        h = CELL - 2;
-                    const rx = x + 1,
-                        ry = y + 1;
+                this.infoSnake.textContent = `🐍 ${Game.snake.length}`;
+                this.infoPath.textContent = `🛤 ${Game.currentPath.length}`;
+                if (Game.target && !(Game.target.x === Game.snake[0].x && Game.target.y === Game.snake[0].y)) 
+                    this.infoTarget.textContent = `🎯 (${Game.target.x},${Game.target.y})`;
+                else this.infoTarget.textContent = '🎯 -';
+                this.infoSteps.textContent = `👞 ${Game.stepsConsumed}`;
+            },
+            _drawGrid() {
+                const ctx = this.ctx;
+                ctx.strokeStyle = '#2a2a4a';
+                ctx.lineWidth = 0.5;
+                for (let i = 0; i <= GRID; i++) {
                     ctx.beginPath();
-                    ctx.moveTo(rx + r, ry);
-                    ctx.lineTo(rx + w - r, ry);
-                    ctx.quadraticCurveTo(rx + w, ry, rx + w, ry + r);
-                    ctx.lineTo(rx + w, ry + h - r);
-                    ctx.quadraticCurveTo(rx + w, ry + h, rx + w - r, ry + h);
-                    ctx.lineTo(rx + r, ry + h);
-                    ctx.quadraticCurveTo(rx, ry + h, rx, ry + h - r);
-                    ctx.lineTo(rx, ry + r);
-                    ctx.quadraticCurveTo(rx, ry, rx + r, ry);
-                    ctx.closePath();
-                    ctx.fillStyle = color;
+                    ctx.moveTo(i * CELL, 0);
+                    ctx.lineTo(i * CELL, CANVAS_SIZE);
+                    ctx.stroke();
+                    ctx.beginPath();
+                    ctx.moveTo(0, i * CELL);
+                    ctx.lineTo(CANVAS_SIZE, i * CELL);
+                    ctx.stroke();
+                }
+            },
+            // 绘制路径背景
+            _drawPath1(){
+                const ctx = this.ctx;
+                const currentPath = Game.currentPath;
+                const state = Game.state;
+                const isReachable = Game.isReachable;
+                if (currentPath.length > 0 && state !== 'GAME_OVER') {
+                    const isReach = isReachable;
+                    const fillColor = isReach ? 'rgba(60, 160, 255, 0.25)' : 'rgba(255, 70, 70, 0.25)';
+                    const strokeColor = isReach ? 'rgba(60, 160, 255, 0.6)' : 'rgba(255, 70, 70, 0.6)';
+
+                    for (let i = 0; i < currentPath.length; i++) {
+                        const p = currentPath[i];
+                        const x = p.x * CELL, y = p.y * CELL;
+                        ctx.fillStyle = fillColor;
+                        ctx.fillRect(x + 1, y + 1, CELL - 2, CELL - 2);
+                        ctx.strokeStyle = strokeColor;
+                        ctx.lineWidth = 1.5;
+                        ctx.strokeRect(x + 1, y + 1, CELL - 2, CELL - 2);
+                    }
+                }   
+            },
+            // 绘制路径前景（数字和大叉）
+            _drawPath2(){
+                const ctx = this.ctx;
+                const currentPath = Game.currentPath;
+                const state = Game.state;
+                const isReachable = Game.isReachable;
+                if (currentPath.length > 0 && state !== 'GAME_OVER') {
+                    const isReach = isReachable;
+                    const fillColor = isReach ? 'rgba(60, 160, 255, 0.25)' : 'rgba(255, 70, 70, 0.25)';
+                    const strokeColor = isReach ? 'rgba(60, 160, 255, 0.6)' : 'rgba(255, 70, 70, 0.6)';
+
+                    // 绘制大叉，在数字下方
+                    if (!isReachable && currentPath.length > 0) {
+                        const last = currentPath[currentPath.length - 1];
+                        const lx = last.x * CELL + HALF;
+                        const ly = last.y * CELL + HALF;
+                        ctx.font = `bold ${CELL * 0.5}px sans-serif`;
+                        ctx.textAlign = 'center';
+                        ctx.textBaseline = 'middle';
+                        ctx.fillStyle = 'rgba(255, 50, 50, 0.9)';
+                        ctx.fillText('❌', lx, ly);
+                    }
+                    // 绘制数字
+                    for (let i = 0; i < currentPath.length; i++) {
+                        const p = currentPath[i];
+                        const x = p.x * CELL, y = p.y * CELL;
+                        ctx.fillStyle = isReach ? '#8ac4ff' : '#ff8a7a';
+                        ctx.font = `bold ${CELL * 0.32}px "Segoe UI", system-ui, sans-serif`;
+                        ctx.textAlign = 'center';
+                        ctx.textBaseline = 'middle';
+                        ctx.fillText((i + 1).toString(), x + HALF, y + HALF + 1);
+                    }
+                }   
+            },
+            _drawFood(){
+                const ctx = this.ctx;
+                const food = Game.food;
+                if (food.x >= 0 && food.y >= 0) {
+                    const fx = food.x * CELL + HALF, fy = food.y * CELL + HALF;
+                    const grad = ctx.createRadialGradient(fx - 3, fy - 3, 2, fx, fy, CELL * 0.45);
+                    grad.addColorStop(0, '#ff6b6b');
+                    grad.addColorStop(0.7, '#ee2222');
+                    grad.addColorStop(1, '#991111');
+                    ctx.beginPath();
+                    ctx.arc(fx, fy, CELL * 0.4, 0, Math.PI * 2);
+                    ctx.fillStyle = grad;
+                    ctx.shadowColor = 'rgba(255, 60, 60, 0.5)';
+                    ctx.shadowBlur = 12;
                     ctx.fill();
                     ctx.shadowBlur = 0;
-
-                    if (i === 0) {
-                        const eyeOff = CELL * 0.22;
-                        const eyeR = CELL * 0.09;
-                        let dx = 1,
-                            dy = 0;
-                        if (len > 1) {
-                            dx = snake[0].x - snake[1].x;
-                            dy = snake[0].y - snake[1].y;
-                        }
-                        if (dx === 0 && dy === 0) { dx = 1;
-                            dy = 0; }
-                        const angle = Math.atan2(dy, dx);
-                        const ex1 = cx + Math.cos(angle + 0.6) * eyeOff;
-                        const ey1 = cy + Math.sin(angle + 0.6) * eyeOff;
-                        const ex2 = cx + Math.cos(angle - 0.6) * eyeOff;
-                        const ey2 = cy + Math.sin(angle - 0.6) * eyeOff;
-                        ctx.fillStyle = '#f0f0ff';
-                        ctx.beginPath();
-                        ctx.arc(ex1, ey1, eyeR, 0, 2 * Math.PI);
-                        ctx.fill();
-                        ctx.beginPath();
-                        ctx.arc(ex2, ey2, eyeR, 0, 2 * Math.PI);
-                        ctx.fill();
-                        ctx.fillStyle = '#1a1a2e';
-                        const pupR = eyeR * 0.5;
-                        ctx.beginPath();
-                        ctx.arc(ex1 + Math.cos(angle) * pupR * 0.6, ey1 + Math.sin(angle) * pupR * 0.6, pupR, 0, 2 * Math
-                        .PI);
-                        ctx.fill();
-                        ctx.beginPath();
-                        ctx.arc(ex2 + Math.cos(angle) * pupR * 0.6, ey2 + Math.sin(angle) * pupR * 0.6, pupR, 0, 2 * Math
-                        .PI);
-                        ctx.fill();
-                    }
+                    ctx.beginPath();
+                    ctx.arc(fx - 3, fy - 4, 4, 0, Math.PI * 2);
+                    ctx.fillStyle = 'rgba(255,255,255,0.3)';
+                    ctx.fill();
                 }
-
-                if (snake.length > 1) {
-                    ctx.lineWidth = CELL * 0.35;
-                    ctx.lineCap = 'round';
-                    for (let i = 0; i < snake.length - 1; i++) {
-                        const p1 = snake[i];
-                        const p2 = snake[i + 1];
-                        const t = snake.length > 1 ? i / (snake.length - 1) : 0;
+            },
+            _drawSnake(){
+                const ctx = this.ctx;
+                const snake = Game.snake;
+                if (snake.length > 0) {
+                    const len = snake.length;
+                    for (let i = 0; i < len; i++) {
+                        // 绘制填充
+                        const p = snake[i];
+                        const x = p.x * CELL, y = p.y * CELL;
+                        const t = len > 1 ? i / (len - 1) : 0; // 0~1, 0为蛇头，1为蛇尾
                         const hue = 220 - t * 210;
-                        ctx.strokeStyle = `hsla(${hue}, 80%, 60%, 0.6)`;
+                        const lightness = 55 - t * 45;
+                        const color = `hsla(${
+                            200 - t * 50
+                        }, 85%, ${
+                            55 - t * 15
+                        }%, ${
+                            0.3 - t * 0.3
+                        })`;
+                        const radius = CELL * 0.28;
+
+                        ctx.shadowColor = `hsla(${hue}, 80%, 50%, 0.3)`;
+                        ctx.shadowBlur = 6;
+
+                        const cx = x + HALF, cy = y + HALF;
+                        const w = CELL - 2, h = CELL - 2;
+                        const rx = x + 1, ry = y + 1;
                         ctx.beginPath();
-                        ctx.moveTo(p1.x * CELL + HALF, p1.y * CELL + HALF);
-                        ctx.lineTo(p2.x * CELL + HALF, p2.y * CELL + HALF);
-                        ctx.stroke();
+                        ctx.moveTo(rx + radius, ry);
+                        ctx.lineTo(rx + w - radius, ry);
+                        ctx.quadraticCurveTo(rx + w, ry, rx + w, ry + radius);
+                        ctx.lineTo(rx + w, ry + h - radius);
+                        ctx.quadraticCurveTo(rx + w, ry + h, rx + w - radius, ry + h);
+                        ctx.lineTo(rx + radius, ry + h);
+                        ctx.quadraticCurveTo(rx, ry + h, rx, ry + h - radius);
+                        ctx.lineTo(rx, ry + radius);
+                        ctx.quadraticCurveTo(rx, ry, rx + radius, ry);
+                        ctx.closePath();
+                        ctx.fillStyle = color;
+                        ctx.fill();
+                        ctx.shadowBlur = 0;
+
+                        // 绘制蛇头
+                        if (i === 0) {
+                            const eyeOff = CELL * 0.22;
+                            const eyeR = CELL * 0.09;
+                            let dx = 1, dy = 0;
+                            if (len > 1) { dx = snake[0].x - snake[1].x; dy = snake[0].y - snake[1].y; }
+                            if (dx === 0 && dy === 0) { dx = 1; dy = 0; }
+                            const angle = Math.atan2(dy, dx);
+                            const ex1 = cx + Math.cos(angle + 0.6) * eyeOff;
+                            const ey1 = cy + Math.sin(angle + 0.6) * eyeOff;
+                            const ex2 = cx + Math.cos(angle - 0.6) * eyeOff;
+                            const ey2 = cy + Math.sin(angle - 0.6) * eyeOff;
+                            ctx.fillStyle = '#f0f0ff';
+                            ctx.beginPath(); ctx.arc(ex1, ey1, eyeR, 0, 2 * Math.PI); ctx.fill();
+                            ctx.beginPath(); ctx.arc(ex2, ey2, eyeR, 0, 2 * Math.PI); ctx.fill();
+                            ctx.fillStyle = '#1a1a2e';
+                            const pupR = eyeR * 0.5;
+                            ctx.beginPath(); ctx.arc(ex1 + Math.cos(angle) * pupR * 0.6, ey1 + Math.sin(angle) * pupR * 0.6, pupR, 0, 2 * Math.PI); ctx.fill();
+                            ctx.beginPath(); ctx.arc(ex2 + Math.cos(angle) * pupR * 0.6, ey2 + Math.sin(angle) * pupR * 0.6, pupR, 0, 2 * Math.PI); ctx.fill();
+                        }
+                    }
+                    
+                    // 绘制蛇身连接线
+                    if (snake.length > 1) {
+                        ctx.lineWidth = CELL * 0.35;
+                        ctx.lineCap = 'round';
+                        let curveNodes = [];
+                        for (let i = 0; i < snake.length; i++) {
+                            const p1 = snake[i];
+                            curveNodes.push({ x: p1.x * CELL + HALF, y: p1.y * CELL + HALF });
+                        }
+                        // 进行插值
+                        const interpolatedPoints = this.getSmoothPoints(curveNodes);
+                        // 绘制曲线
+                        for(let i = 0; i < interpolatedPoints.length; i++) {
+                            ctx.beginPath();
+                            const p = interpolatedPoints[i];
+                            const t = i / (interpolatedPoints.length - 1);
+                            const color = `hsl(${200 - t * 50}, 85%, ${55 - t * 15}%)`;
+                            ctx.strokeStyle = color;
+                            if (i === 0) ctx.moveTo(p.x, p.y);
+                            else ctx.lineTo(p.x, p.y);
+                            ctx.stroke();
+                        }
                     }
                 }
-            }
-
-            if (state === 'GAME_OVER') {
-                ctx.fillStyle = 'rgba(0,0,0,0.5)';
-                ctx.fillRect(0, 0, 600, 600);
-                ctx.fillStyle = '#ff6a6a';
-                ctx.font = 'bold 48px sans-serif';
-                ctx.textAlign = 'center';
-                ctx.textBaseline = 'middle';
-                ctx.shadowColor = 'rgba(255,0,0,0.5)';
-                ctx.shadowBlur = 30;
-                ctx.fillText('💀 GAME OVER', 300, 280);
-                ctx.shadowBlur = 0;
-                ctx.fillStyle = '#ccaacc';
-                ctx.font = '20px sans-serif';
-                ctx.fillText('点击"新游戏"重新开始', 300, 350);
-            }
-
-            if (food.x === -1 && food.y === -1 && state !== 'GAME_OVER') {
-                ctx.fillStyle = 'rgba(0,0,0,0.5)';
-                ctx.fillRect(0, 0, 600, 600);
-                ctx.fillStyle = '#6aff6a';
-                ctx.font = 'bold 48px sans-serif';
-                ctx.textAlign = 'center';
-                ctx.textBaseline = 'middle';
-                ctx.shadowColor = 'rgba(0,255,0,0.5)';
-                ctx.shadowBlur = 30;
-                ctx.fillText('🎉 你赢了！', 300, 280);
-                ctx.shadowBlur = 0;
-                ctx.fillStyle = '#ccaacc';
-                ctx.font = '20px sans-serif';
-                ctx.fillText('点击"新游戏"再来一局', 300, 350);
-            }
-
-            if (state === 'PLANNED' && currentPath.length > 0) {
-                ctx.fillStyle = 'rgba(0,0,0,0.6)';
-                ctx.fillRect(10, 560, 160, 28);
-                ctx.fillStyle = '#7abfff';
-                ctx.font = '13px sans-serif';
-                ctx.textAlign = 'left';
-                ctx.textBaseline = 'middle';
-                const label = isReachable ? '✅ 点击同一格执行' : '❌ 不可达';
-                ctx.fillText(label, 18, 574);
-            }
-        }
-
-        // ---------- 点击处理 ----------
-        function handleCanvasClick(e) {
-            if (state === 'GAME_OVER') return;
-            const rect = canvas.getBoundingClientRect();
-            const scaleX = canvas.width / rect.width;
-            const scaleY = canvas.height / rect.height;
-            const mx = (e.clientX - rect.left) * scaleX;
-            const my = (e.clientY - rect.top) * scaleY;
-            const gx = Math.floor(mx / CELL);
-            const gy = Math.floor(my / CELL);
-            if (gx < 0 || gx >= GRID || gy < 0 || gy >= GRID) return;
-
-            // 执行中 → 跳过动画
-            if (state === 'EXECUTING') {
-                skipRequested = true;
-                window._pendingTarget = { x: gx, y: gy };
-                return;
-            }
-
-            const targetPos = { x: gx, y: gy };
-
-            // 判断是否与上次点击同一格 (用于决定是否执行)
-            const isSameTarget = lastClickedTarget &&
-                lastClickedTarget.x === targetPos.x &&
-                lastClickedTarget.y === targetPos.y;
-
-            // 规划
-            const plan = planPath(targetPos);
-            currentPath = plan.path;
-            isReachable = plan.reachable;
-            target = targetPos;
-
-            if (state === 'IDLE') {
-                // 第一次点击 (或从空闲状态) → 显示路径, 进入 PLANNED
-                lastClickedTarget = targetPos;
-                if (plan.reachable) {
-                    state = 'PLANNED';
-                } else {
-                    state = 'IDLE';
-                }
-                updateUI();
-                draw();
-            } else if (state === 'PLANNED') {
-                if (isSameTarget && plan.reachable && plan.path.length > 0) {
-                    // 同一格 → 执行
-                    startExecution(plan);
-                } else {
-                    // 不同格 → 重新规划，停留在 PLANNED (不执行)
-                    lastClickedTarget = targetPos;
-                    if (plan.reachable) {
-                        state = 'PLANNED';
+            },
+            _drawPrompt(){
+                const ctx = this.ctx;
+                // 结算动画
+                if (Game.state === 'GAME_OVER') {
+                    if(Game.isVictory()) {
+                        ctx.fillStyle = 'rgba(0,0,0,0.5)';
+                        ctx.fillRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
+                        ctx.fillStyle = '#6aff6a';
+                        ctx.font = 'bold 48px sans-serif';
+                        ctx.textAlign = 'center';
+                        ctx.textBaseline = 'middle';
+                        ctx.shadowColor = 'rgba(0,255,0,0.5)';
+                        ctx.shadowBlur = 30;
+                        ctx.fillText('🎉 你赢了！', HALF_CANVAS, HALF_CANVAS);
+                        ctx.shadowBlur = 0;
+                        ctx.fillStyle = '#ccaacc';
+                        ctx.font = '20px sans-serif';
+                        ctx.fillText('点击"新游戏"再来一局', HALF_CANVAS, HALF_CANVAS + 50);
                     } else {
-                        state = 'IDLE';
+                        ctx.fillStyle = 'rgba(0,0,0,0.5)';
+                        ctx.fillRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
+                        ctx.fillStyle = '#ff6a6a';
+                        ctx.font = 'bold 48px sans-serif';
+                        ctx.textAlign = 'center';
+                        ctx.textBaseline = 'middle';
+                        ctx.shadowColor = 'rgba(255,0,0,0.5)';
+                        ctx.shadowBlur = 30;
+                        ctx.fillText('💀 GAME OVER', HALF_CANVAS, HALF_CANVAS - 20);
+                        ctx.shadowBlur = 0;
+                        ctx.fillStyle = '#ccaacc';
+                        ctx.font = '20px sans-serif';
+                        ctx.fillText('点击"新游戏"重新开始', HALF_CANVAS, HALF_CANVAS + 50);
                     }
-                    updateUI();
-                    draw();
                 }
-            }
-        }
+                // 规划提示
+                if (Game.state === 'PLANNED' && Game.currentPath.length > 0) {
+                    ctx.fillStyle = 'rgba(0,0,0,0.6)';
+                    ctx.fillRect(10, 560, 160, 28);
+                    ctx.fillStyle = '#7abfff';
+                    ctx.font = '13px sans-serif';
+                    ctx.textAlign = 'left';
+                    ctx.textBaseline = 'middle';
+                    const label = Game.isReachable ? '✅ 点击同一格执行' : '❌ 不可达';
+                    ctx.fillText(label, 18, 574);
+                }
+            },
+            draw() {
+                const ctx = this.ctx;
+                ctx.clearRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
 
-        // ---------- 重新开始 ----------
-        function restartGame() {
-            if (stepTimer) {
-                clearInterval(stepTimer);
-                stepTimer = null;
-            }
-            isExecuting = false;
-            skipRequested = false;
-            window._pendingTarget = null;
-            lastClickedTarget = null;
-            initGame();
-        }
-
-        // ---------- 速度控制 ----------
-        speedSlider.addEventListener('input', function() {
-            stepInterval = Math.round(Math.pow(10, parseFloat(this.value)));
-            speedLabel.textContent = stepInterval + 'ms';
-            if (stepTimer) {
-                clearInterval(stepTimer);
-                stepTimer = null;
-                if (state === 'EXECUTING' && isExecuting && currentPath.length > 0) {
-                    const plan = {
-                        path: currentPath.slice(),
-                        reachable: isReachable,
-                        target: target,
-                        isFoodTarget: (food.x === target?.x && food.y === target?.y)
+                this._drawGrid();
+                this._drawPath1();
+                this._drawFood();
+                this._drawSnake();
+                this._drawPath2();
+                this._drawPrompt();
+            },
+            // 三次贝塞尔曲线插值
+            // p0: 起点, p1,p2: 控制点, p3: 终点
+            cubicBezier(p0, p1, p2, p3, t) {
+                const u = 1 - t;
+                return {
+                    x: u*u*u*p0.x + 3*u*u*t*p1.x + 3*u*t*t*p2.x + t*t*t*p3.x,
+                    y: u*u*u*p0.y + 3*u*u*t*p1.y + 3*u*t*t*p2.y + t*t*t*p3.y
+                };
+            },
+            // Catmull-Rom 样条插值
+            getSmoothPoints(points, segmentsPerSegment = 10) {
+                const result = [];
+                
+                for (let i = 0; i < points.length - 1; i++) {
+                    const p0 = points[Math.max(0, i - 1)];
+                    const p1 = points[i];
+                    const p2 = points[i + 1];
+                    const p3 = points[Math.min(points.length - 1, i + 2)];
+                    
+                    // 计算控制点
+                    const tension = 0.3; // 张力系数，0~1
+                    const cp1 = {
+                        x: p1.x + (p2.x - p0.x) * tension / 3,
+                        y: p1.y + (p2.y - p0.y) * tension / 3
                     };
-                    startExecution(plan);
+                    const cp2 = {
+                        x: p2.x - (p3.x - p1.x) * tension / 3,
+                        y: p2.y - (p3.y - p1.y) * tension / 3
+                    };
+                    
+                    // 生成该段上的采样点
+                    for (let j = 0; j <= segmentsPerSegment; j++) {
+                        const t = j / segmentsPerSegment;
+                        result.push(this.cubicBezier(p1, cp1, cp2, p2, t));
+                    }
                 }
+                
+                return result;
             }
-        });
-        speedSlider.dispatchEvent(new Event('input'));
+        };
 
-        // ---------- 事件绑定 ----------
-        canvas.addEventListener('click', handleCanvasClick);
-        restartBtn.addEventListener('click', restartGame);
+        const Game = {
+            snake: [],
+            food: { x: 8, y: 12 },
+            state: 'IDLE',
+            target: null,
+            currentPath: [],
+            isReachable: false,
+            stepTimer: null,
+            isExecuting: false,
+            stepInterval: 20,
+            skipRequested: false,
+            lastClickedTarget: null,
+            touchOverwrite: 0,
+            stepsConsumed: 0,
+            init() {
+                // initialize snake
+                this.snake = [
+                    { x: HALF_GRID, y: HALF_GRID },
+                    { x: HALF_GRID - 1, y: HALF_GRID },
+                    { x: HALF_GRID - 2, y: HALF_GRID },
+                    { x: HALF_GRID - 3, y: HALF_GRID }
+                ];
+                this.generateFood();
+                this.state = 'IDLE';
+                this.target = null;
+                this.currentPath = [];
+                this.isReachable = false;
+                this.skipRequested = false;
+                this.lastClickedTarget = null;
+                this.stepsConsumed = 0;
+                if (this.stepTimer) { clearInterval(this.stepTimer); this.stepTimer = null; }
+                this.isExecuting = false;
+                Renderer.updateUI();
+                Renderer.draw();
+            },
+            generateFood() {
+                const total = GRID * GRID;
+                if (this.snake.length >= total) { this.food = { x: -1, y: -1 }; return; }
+                const snakeSet = new Set(this.snake.map(p => `${p.x},${p.y}`));
+                const free = [];
+                for (let i = 0; i < GRID; i++) for (let j = 0; j < GRID; j++) if (!snakeSet.has(`${i},${j}`)) free.push({ x: i, y: j });
+                if (free.length === 0) { this.food = { x: -1, y: -1 }; return; }
+                const idx = Math.floor(Math.random() * free.length);
+                this.food = free[idx];
+            },
+            getHeadDirection() {
+                if (this.snake.length < 2) return DIR.RIGHT;
+                const head = this.snake[0], next = this.snake[1];
+                const dx = head.x - next.x, dy = head.y - next.y;
+                if (dx === 1 && dy === 0) return DIR.RIGHT;
+                if (dx === -1 && dy === 0) return DIR.LEFT;
+                if (dx === 0 && dy === 1) return DIR.DOWN;
+                if (dx === 0 && dy === -1) return DIR.UP;
+                return DIR.RIGHT;
+            },
+            computeDistMap(head) {
+                const dist = Array.from({ length: GRID }, () => Array(GRID).fill(Infinity));
+                dist[head.x][head.y] = 0;
+                const queue = [{ x: head.x, y: head.y }];
+                while (queue.length > 0) {
+                    const cur = queue.shift();
+                    const d = dist[cur.x][cur.y];
+                    for (let i = 0; i < 4; i++) {
+                        const nx = cur.x + DX[i], ny = cur.y + DY[i];
+                        if (nx < 0 || nx >= GRID || ny < 0 || ny >= GRID) continue;
+                        if (dist[nx][ny] > d + 1) { dist[nx][ny] = d + 1; queue.push({ x: nx, y: ny }); }
+                    }
+                }
+                return dist;
+            },
+            isCellWalkable(x, y, distMap, targetPos, isFoodTarget) {
+                if (x < 0 || x >= GRID || y < 0 || y >= GRID) return false;
+                if (this.food.x >= 0 && this.food.y >= 0) {
+                    if (x === this.food.x && y === this.food.y && !isFoodTarget) return false;
+                }
+                const idx = this.snake.findIndex(p => p.x === x && p.y === y);
+                if (idx === -1) return true;
+                if (idx === 0) return true;
+                const d = distMap[x][y];
+                if (d === Infinity) return false;
+                return d >= this.snake.length - idx;
+            },
+            bfsDynamic(start, goal, isFoodTarget) {
+                if (start.x === goal.x && start.y === goal.y) return [];
+                const distMap = this.computeDistMap(start);
+                const visited = Array.from({ length: GRID }, () => Array(GRID).fill(false));
+                const parent = Array.from({ length: GRID }, () => Array(GRID).fill(null));
+                const parentDir = Array.from({ length: GRID }, () => Array(GRID).fill(-1));
+                const queue = [{ x: start.x, y: start.y }];
+                visited[start.x][start.y] = true;
+                let nearestNode = { x: start.x, y: start.y }, nearestDist = Infinity;
+                const headDir = this.getHeadDirection();
+                while (queue.length > 0) {
+                    const cur = queue.shift();
+                    if (cur.x === goal.x && cur.y === goal.y) break;
+                    const curDist = Math.abs(cur.x - goal.x) + Math.abs(cur.y - goal.y);
+                    if (curDist < nearestDist && !(cur.x === start.x && cur.y === start.y)) { nearestDist = curDist; nearestNode = { x: cur.x, y: cur.y }; }
+                    let entryDir = parentDir[cur.x][cur.y]; if (entryDir === -1) entryDir = headDir;
+                    const candidates = [];
+                    for (let d = 0; d < 4; d++) {
+                        const nx = cur.x + DX[d], ny = cur.y + DY[d];
+                        if (nx < 0 || nx >= GRID || ny < 0 || ny >= GRID) continue;
+                        if (visited[nx][ny]) continue;
+                        if (!this.isCellWalkable(nx, ny, distMap, goal, isFoodTarget)) continue;
+                        let score = 0;
+                        if (d === entryDir) score = 3;
+                        else if (d === (entryDir + 3) % 4) score = 2;
+                        else if (d === (entryDir + 1) % 4) score = 1;
+                        else score = 0;
+                        candidates.push({ x: nx, y: ny, dir: d, score: score });
+                    }
+                    candidates.sort((a, b) => b.score - a.score);
+                    for (const c of candidates) {
+                        if (!visited[c.x][c.y]) { visited[c.x][c.y] = true; parent[c.x][c.y] = { x: cur.x, y: cur.y }; parentDir[c.x][c.y] = c.dir; queue.push({ x: c.x, y: c.y }); }
+                    }
+                }
+                const path = [];
+                let cur = { x: goal.x, y: goal.y };
+                if (!visited[goal.x][goal.y]) cur = nearestNode;
+                while (cur.x !== start.x || cur.y !== start.y) {
+                    path.unshift({ x: cur.x, y: cur.y });
+                    const p = parent[cur.x][cur.y]; if (!p) break; cur = p;
+                }
+                return path;
+            },
+            planPath(targetPos) {
+                const head = this.snake[0];
+                const isFoodTarget = (this.food.x === targetPos.x && this.food.y === targetPos.y);
+                const path = this.bfsDynamic(head, targetPos, isFoodTarget);
+                let reachable = path[path.length - 1]?.x === targetPos.x && path[path.length - 1]?.y === targetPos.y;
+                let nearest = path.length > 0 ? path[path.length - 1] : head;
+                if (targetPos.x === head.x && targetPos.y === head.y) { reachable = false; nearest = head; }
+                return { path, reachable, nearest, target: targetPos, isFoodTarget };
+            },
+            startExecution(plan) {
+                if (this.state === 'GAME_OVER') return;
+                if (!plan || !plan.reachable || plan.path.length === 0) {
+                    this.state = 'IDLE'; this.lastClickedTarget = null; Renderer.updateUI(); Renderer.draw(); return;
+                }
+                this.state = 'EXECUTING'; this.isExecuting = true; this.skipRequested = false; window._pendingTarget = null; Renderer.updateUI(); Renderer.draw();
+                let path = plan.path.slice(); let stepIndex = 0;
+                if (this.stepTimer) { clearInterval(this.stepTimer); this.stepTimer = null; }
+                this.stepTimer = setInterval(()=>{
+                    if (this.state === 'GAME_OVER') { clearInterval(this.stepTimer); this.stepTimer = null; this.isExecuting = false; return; }
+                    if (this.skipRequested) {
+                        this.skipRequested = false; const remainingPath = path.slice(stepIndex);
+                        for (let i = 0; i < remainingPath.length; i++) {
+                            const next = remainingPath[i]; const newHead = { x: next.x, y: next.y };
+                            let ate = false; if (this.food.x >= 0 && this.food.y >= 0) { if (newHead.x === this.food.x && newHead.y === this.food.y) ate = true; }
+                            this.snake.unshift(newHead); if (!ate) this.snake.pop(); else { this.generateFood(); if (this.food.x === -1 && this.food.y === -1) { this.state = 'GAME_OVER'; return; } }
+                            this.stepsConsumed++;
+                            if (this.isHeadTrapped()) { this.state = 'GAME_OVER'; return; }
+                        }
+                        this.state = 'IDLE'; this.isExecuting = false; this.currentPath = []; this.target = null; this.isReachable = false; this.lastClickedTarget = null; clearInterval(this.stepTimer); this.stepTimer = null; Renderer.updateUI(); Renderer.draw(); return;
+                    }
+                    if (stepIndex >= path.length) {
+                        this.state = 'IDLE'; this.isExecuting = false; this.currentPath = []; this.target = null; this.isReachable = false; this.lastClickedTarget = null; clearInterval(this.stepTimer); this.stepTimer = null; Renderer.updateUI(); Renderer.draw();
+                        if (window._pendingTarget) {
+                            const pt = window._pendingTarget; window._pendingTarget = null; const newPlan = this.planPath(pt); this.currentPath = newPlan.path; this.isReachable = newPlan.reachable; this.target = pt; this.lastClickedTarget = pt; if (newPlan.reachable) { this.state = 'PLANNED'; Renderer.updateUI(); Renderer.draw(); } else { this.state = 'IDLE'; Renderer.updateUI(); Renderer.draw(); }
+                        }
+                        return;
+                    }
+                    const next = path[stepIndex]; if (next.x < 0 || next.x >= GRID || next.y < 0 || next.y >= GRID) { this.state = 'IDLE'; this.isExecuting = false; clearInterval(this.stepTimer); this.stepTimer = null; Renderer.updateUI(); Renderer.draw(); return; }
+                    const newHead = { x: next.x, y: next.y }; let ate = false; if (this.food.x >= 0 && this.food.y >= 0) { if (newHead.x === this.food.x && newHead.y === this.food.y) ate = true; }
+                    this.snake.unshift(newHead); if (!ate) this.snake.pop(); else { this.generateFood(); if (this.food.x === -1 && this.food.y === -1) { this.state = 'GAME_OVER'; this.isExecuting = false; clearInterval(this.stepTimer); this.stepTimer = null; Renderer.updateUI(); Renderer.draw(); return; } }
+                    this.stepsConsumed++;
+                    if (this.isHeadTrapped()) { this.state = 'GAME_OVER'; this.isExecuting = false; clearInterval(this.stepTimer); this.stepTimer = null; Renderer.updateUI(); Renderer.draw(); return; }
+                    stepIndex++; Renderer.updateUI(); Renderer.draw();
+                    if (stepIndex >= path.length) {
+                        this.state = 'IDLE'; this.isExecuting = false; this.currentPath = []; this.target = null; this.isReachable = false; this.lastClickedTarget = null; clearInterval(this.stepTimer); this.stepTimer = null; Renderer.updateUI(); Renderer.draw();
+                        if (window._pendingTarget) {
+                            const pt = window._pendingTarget; window._pendingTarget = null; const newPlan = this.planPath(pt); this.currentPath = newPlan.path; this.isReachable = newPlan.reachable; this.target = pt; this.lastClickedTarget = pt; if (newPlan.reachable) { this.state = 'PLANNED'; Renderer.updateUI(); Renderer.draw(); } else { this.state = 'IDLE'; Renderer.updateUI(); Renderer.draw(); }
+                        }
+                    }
+                }, this.stepInterval);
+            },
+            isHeadTrapped() {
+                const head = this.snake[0];
+                const snakeSet = new Set(this.snake.map((p, i) => { if (i === this.snake.length - 1) return null; return `${p.x},${p.y}`; }));
+                snakeSet.delete(null);
+                for (let d = 0; d < 4; d++) {
+                    const nx = head.x + DX[d], ny = head.y + DY[d];
+                    if (nx < 0 || nx >= GRID || ny < 0 || ny >= GRID) continue;
+                    if (!snakeSet.has(`${nx},${ny}`)) return false;
+                }
+                return true;
+            },
+            isVictory() {
+                return this.snake.length >= GRID * GRID;
+            },
+            // 鼠标悬停（仅桌面）用于即时规划路径
+            handleCanvasHover(e) {
+                if (IS_MOBILE) return;
+                if (this.state === 'GAME_OVER') return;
+                if (this.state === 'EXECUTING') return;
+                const rect = Renderer.canvas.getBoundingClientRect();
+                const scaleX = Renderer.canvas.width / rect.width;
+                const scaleY = Renderer.canvas.height / rect.height;
+                const mx = (e.clientX - rect.left) * scaleX;
+                const my = (e.clientY - rect.top) * scaleY;
+                const gx = Math.floor(mx / CELL), gy = Math.floor(my / CELL);
+                if (gx < 0 || gx >= GRID || gy < 0 || gy >= GRID) return;
+                const targetPos = { x: gx, y: gy };
+                const plan = this.planPath(targetPos);
+                this.currentPath = plan.path; this.isReachable = plan.reachable; this.target = targetPos; this.lastClickedTarget = targetPos;
+                this.state = plan.reachable ? 'PLANNED' : 'IDLE';
+                Renderer.updateUI(); Renderer.draw();
+            },
+            handleCanvasClick(e) {
+                if (this.touchOverwrite > 0 && e.type === 'click') return;
+                if (this.state === 'GAME_OVER') return;
+                const rect = Renderer.canvas.getBoundingClientRect();
+                const scaleX = Renderer.canvas.width / rect.width;
+                const scaleY = Renderer.canvas.height / rect.height;
+                const mx = (e.clientX - rect.left) * scaleX;
+                const my = (e.clientY - rect.top) * scaleY;
+                const gx = Math.floor(mx / CELL), gy = Math.floor(my / CELL);
+                if (gx < 0 || gx >= GRID || gy < 0 || gy >= GRID) return;
 
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'r' || e.key === 'R') {
-                restartGame();
+                // 桌面端：鼠标移动已做规划，首次点击直接执行
+                if (!IS_MOBILE) {
+                    if (this.state === 'EXECUTING') { this.skipRequested = true; window._pendingTarget = { x: gx, y: gy }; return; }
+                    const targetPos = { x: gx, y: gy };
+                    const plan = this.planPath(targetPos);
+                    this.currentPath = plan.path; this.isReachable = plan.reachable; this.target = targetPos; this.lastClickedTarget = targetPos;
+                    if (plan.reachable && plan.path.length > 0) {
+                        this.startExecution(plan);
+                    } else {
+                        this.state = 'IDLE'; Renderer.updateUI(); Renderer.draw();
+                    }
+                    return;
+                }
+
+                // 移动端：保留原有两步逻辑（首次规划，重复点击执行）
+                if (this.state === 'EXECUTING') { this.skipRequested = true; window._pendingTarget = { x: gx, y: gy }; return; }
+                const targetPos = { x: gx, y: gy };
+                const isSameTarget = this.lastClickedTarget && this.lastClickedTarget.x === targetPos.x && this.lastClickedTarget.y === targetPos.y;
+                const plan = this.planPath(targetPos);
+                this.currentPath = plan.path; this.isReachable = plan.reachable; this.target = targetPos;
+                if (this.state === 'IDLE') { this.lastClickedTarget = targetPos; if (plan.reachable) this.state = 'PLANNED'; else this.state = 'IDLE'; Renderer.updateUI(); Renderer.draw(); }
+                else if (this.state === 'PLANNED') {
+                    if (isSameTarget && plan.reachable && plan.path.length > 0) { this.startExecution(plan); }
+                    else { this.lastClickedTarget = targetPos; if (plan.reachable) this.state = 'PLANNED'; else this.state = 'IDLE'; Renderer.updateUI(); Renderer.draw(); }
+                }
+            },
+            restartGame() {
+                if (this.stepTimer) { clearInterval(this.stepTimer); this.stepTimer = null; }
+                this.isExecuting = false; this.skipRequested = false; window._pendingTarget = null; this.lastClickedTarget = null; this.init();
+            },
+            onSpeedChange() {
+                this.stepInterval = Math.round(Math.pow(10, parseFloat(Renderer.speedSlider.value)));
+                Renderer.speedLabel.textContent = this.stepInterval + 'ms';
+                if (this.stepTimer) { clearInterval(this.stepTimer); this.stepTimer = null; if (this.state === 'EXECUTING' && this.isExecuting && this.currentPath.length > 0) { const plan = { path: this.currentPath.slice(), reachable: this.isReachable, target: this.target, isFoodTarget: (this.food.x === this.target?.x && this.food.y === this.target?.y) }; this.startExecution(plan); } }
             }
-        });
+        };
 
         // ---------- 启动 ----------
-        initGame();
+        Renderer.init();
+        Game.init();
 
         //
-        console.log("这是一个由小唐丸模型生成的贪吃蛇游戏，除了能跑，剩下的只有屎。")
-        console.log("我才不会给它擦屁股呢，智障东西 o((>ω< ))o")
-        console.log("咒这个大傻逼模型永远找不到对象 (* ￣︿￣) ")
-        console.log("（热知识：这里它确实没有对象，也没有码）")
+        console.log("开发者主页：https://github.com/Joat917")
     </script>
 </body>
 </html>
